@@ -1,5 +1,5 @@
-// Markdown per le risposte di Vio: titoli, liste, tabelle, citazioni, codice (con Copia e Inserisci), link.
-// Tutto il testo passa da escape(): niente HTML dal modello arriva alla pagina.
+// Markdown for Vio's answers: headings, lists, tables, quotes, code (with Copy and Insert), links.
+// All text goes through escape(): no HTML from the model reaches the page.
 (function () {
   const escape = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
@@ -24,7 +24,7 @@
   function codeBlock(body, info) {
     const [lang = "", ...rest] = info.trim().split(/\s+/);
     const file = (rest.join(" ").match(/file=(\S+)/) || [])[1] || "";
-    const label = file || lang || "codice";
+    const label = file || lang || "code";
     let inner;
     if (lang === "diff") {
       inner = body.split("\n").map((line) => {
@@ -35,8 +35,8 @@
       inner = escape(body);
     }
     return `<div class="code"><div class="code-head"><span>${escape(label)}</span>` +
-      `<span class="code-actions"><button class="link" data-copy>Copia</button>` +
-      (lang === "diff" ? "" : `<button class="link" data-insert>Inserisci</button>`) +
+      `<span class="code-actions"><button class="link" data-copy>Copy</button>` +
+      (lang === "diff" ? "" : `<button class="link" data-insert>Insert</button>`) +
       `</span></div><pre><code>${inner}</code></pre></div>`;
   }
 
@@ -45,7 +45,7 @@
   const TABLE_RULE = /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/;
 
   function list(lines, start) {
-    // una lista (anche annidata, con l'indentazione): → [html, indice della prima riga dopo]
+    // a list (nested too, by indentation): → [html, index of the first line after it]
     const first = lines[start].match(LIST);
     const indent = first[1].length;
     const ordered = /\d/.test(first[2]);
@@ -72,7 +72,7 @@
         : `<li>${inline(text)}</li>`;
       if (i < lines.length && !lines[i].trim() && i + 1 < lines.length && LIST.test(lines[i + 1]) &&
           lines[i + 1].match(LIST)[1].length >= indent) {
-        i++; // una riga vuota tra le voci non chiude la lista
+        i++; // a blank line between items does not end the list
       }
     }
     return [html + (ordered ? "</ol>" : "</ul>"), i];
@@ -108,7 +108,7 @@
       if (!line.trim()) { i++; continue; }
       const heading = line.match(/^(#{1,6})\s+(.*)$/);
       if (heading) {
-        const level = Math.min(heading[1].length + 2, 6); // nella chat i titoli restano piccoli
+        const level = Math.min(heading[1].length + 2, 6); // in the chat, headings stay small
         html += `<h${level}>${inline(heading[2].replace(/\s*#+\s*$/, ""))}</h${level}>`;
         i++;
         continue;

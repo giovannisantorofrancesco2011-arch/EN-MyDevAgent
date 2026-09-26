@@ -1,24 +1,26 @@
-﻿; MyDevAgent Studio: installer per Windows (Inno Setup 6). Lo compila studio\build.ps1 con:
-;   ISCC /DVersione=0.1.0 /DSorgente=<VSCodium modificato> /DExe=VSCodium.exe /DCli=codium.cmd /DBranding=<icone>
-#define Nome "MyDevAgent Studio"
+﻿; MyDevAgent Studio (English edition): Windows installer (Inno Setup 6). Compiled by studio\build.ps1 with:
+;   ISCC /DStudioVersion=0.2.0 /DStudioSource=<modified VSCodium> /DExe=VSCodium.exe /DBranding=<icons>
+; It has its own AppId, folder, shortcuts and registry keys, so it can be installed next to the Italian edition.
+#define StudioName "MyDevAgent Studio"
+#define StudioEdition "MyDevAgent Studio EN"
 
 [Setup]
-AppId={{6F1C2D3A-8B4E-4F7A-9C21-5D3E7A9B1F42}
-AppName={#Nome}
-AppVersion={#Versione}
-AppVerName={#Nome} {#Versione}
+AppId={{BE5E880B-4F27-402B-87C5-C58F7E660D2B}
+AppName={#StudioName}
+AppVersion={#StudioVersion}
+AppVerName={#StudioName} {#StudioVersion}
 AppPublisher=MyDevAgent
 AppPublisherURL=https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent
 AppSupportURL=https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/issues
-DefaultDirName={localappdata}\Programs\{#Nome}
+DefaultDirName={localappdata}\Programs\{#StudioEdition}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-OutputBaseFilename=MyDevAgent-Studio-Setup
+OutputBaseFilename=MyDevAgent-Studio-Setup-EN
 SetupIconFile={#Branding}\vio.ico
 UninstallDisplayIcon={app}\{#Exe}
-UninstallDisplayName={#Nome}
+UninstallDisplayName={#StudioName} (English)
 WizardStyle=modern
 WizardImageFile={#Branding}\wizard.bmp,{#Branding}\wizard-2x.bmp
 WizardSmallImageFile={#Branding}\wizard-small.bmp,{#Branding}\wizard-small-2x.bmp
@@ -27,59 +29,38 @@ SolidCompression=yes
 CloseApplications=force
 
 [Languages]
-Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
-it.WelcomeLabel2=Installo [name/ver]: l'editor di codice con Vio, il tuo agente di programmazione che lavora sul tuo computer, senza cloud.%n%nSe mancano, posso installare anche Python, Ollama e MyDevAgent.
+en.WelcomeLabel2=This will install [name/ver]: the code editor with Vio, your coding agent that works on your own computer, with no cloud.%n%nIf they are missing, I can also install Python, Ollama and MyDevAgent.
 
 [Tasks]
-Name: "mydevagent"; Description: "Installa anche Python, Ollama e MyDevAgent se mancano (serve Internet: i modelli pesano qualche GB)"
-Name: "desktopicon"; Description: "Crea un'icona sul desktop"; GroupDescription: "Icone:"
-Name: "contextmenu"; Description: "Aggiungi «Apri con {#Nome}» al menu delle cartelle"; GroupDescription: "Altro:"
+Name: "mydevagent"; Description: "Also install Python, Ollama and MyDevAgent if they are missing (needs Internet: the models take a few GB)"
+Name: "desktopicon"; Description: "Create a desktop icon"; GroupDescription: "Icons:"
+Name: "contextmenu"; Description: "Add ""Open with {#StudioName}"" to the folder menu"; GroupDescription: "Other:"
 
 [InstallDelete]
-; via i file della versione precedente (VSCodium può cambiare struttura tra una versione e l'altra)
+; remove the files of the previous version (VSCodium can change its layout between versions)
 Type: filesandordirs; Name: "{app}\resources"
 Type: filesandordirs; Name: "{app}\locales"
 Type: filesandordirs; Name: "{app}\bin"
 Type: filesandordirs; Name: "{app}\extras"
 
 [Files]
-Source: "{#Sorgente}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#StudioSource}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\{#Nome}"; Filename: "{app}\{#Exe}"; AppUserModelID: "MyDevAgent.Studio"
-Name: "{autodesktop}\{#Nome}"; Filename: "{app}\{#Exe}"; AppUserModelID: "MyDevAgent.Studio"; Tasks: desktopicon
+Name: "{autoprograms}\{#StudioEdition}"; Filename: "{app}\{#Exe}"; AppUserModelID: "MyDevAgent.Studio.EN"
+Name: "{autodesktop}\{#StudioEdition}"; Filename: "{app}\{#Exe}"; AppUserModelID: "MyDevAgent.Studio.EN"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\Directory\shell\MyDevAgentStudio"; ValueType: expandsz; ValueName: ""; ValueData: "Apri con {#Nome}"; Tasks: contextmenu; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\Directory\shell\MyDevAgentStudio"; ValueType: expandsz; ValueName: "Icon"; ValueData: "{app}\{#Exe}"; Tasks: contextmenu
-Root: HKCU; Subkey: "Software\Classes\Directory\shell\MyDevAgentStudio\command"; ValueType: expandsz; ValueName: ""; ValueData: """{app}\{#Exe}"" ""%V"""; Tasks: contextmenu
-Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\MyDevAgentStudio"; ValueType: expandsz; ValueName: ""; ValueData: "Apri con {#Nome}"; Tasks: contextmenu; Flags: uninsdeletekey
-Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\MyDevAgentStudio"; ValueType: expandsz; ValueName: "Icon"; ValueData: "{app}\{#Exe}"; Tasks: contextmenu
-Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\MyDevAgentStudio\command"; ValueType: expandsz; ValueName: ""; ValueData: """{app}\{#Exe}"" ""%V"""; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\MyDevAgentStudioEN"; ValueType: expandsz; ValueName: ""; ValueData: "Open with {#StudioName}"; Tasks: contextmenu; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\MyDevAgentStudioEN"; ValueType: expandsz; ValueName: "Icon"; ValueData: "{app}\{#Exe}"; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\MyDevAgentStudioEN\command"; ValueType: expandsz; ValueName: ""; ValueData: """{app}\{#Exe}"" ""%V"""; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\MyDevAgentStudioEN"; ValueType: expandsz; ValueName: ""; ValueData: "Open with {#StudioName}"; Tasks: contextmenu; Flags: uninsdeletekey
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\MyDevAgentStudioEN"; ValueType: expandsz; ValueName: "Icon"; ValueData: "{app}\{#Exe}"; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\MyDevAgentStudioEN\command"; ValueType: expandsz; ValueName: ""; ValueData: """{app}\{#Exe}"" ""%V"""; Tasks: contextmenu
 
 [Run]
-Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\extras\installa-mydevagent.ps1"" -Pausa"; StatusMsg: "Installo Python, Ollama e MyDevAgent: segui la finestra che si è aperta..."; Tasks: mydevagent; Flags: waituntilterminated
-Filename: "{app}\{#Exe}"; Description: "Avvia {#Nome}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-// Lingua italiana: il language pack si installa con la CLI di Studio e argv.json sceglie "it" al primo avvio.
-procedure CurStepChanged(CurStep: TSetupStep);
-var
-  ResultCode: Integer;
-  Argv: String;
-begin
-  if CurStep = ssPostInstall then
-  begin
-    WizardForm.StatusLabel.Caption := 'Installo la lingua italiana...';
-    Exec(ExpandConstant('{cmd}'), '/c ""' + ExpandConstant('{app}\bin\{#Cli}') + '" --install-extension "' +
-      ExpandConstant('{app}\extras\italiano.vsix') + '" --force"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-    Argv := ExpandConstant('{%USERPROFILE}\.mydevagent-studio\argv.json');
-    if not FileExists(Argv) then
-    begin
-      ForceDirectories(ExtractFileDir(Argv));
-      SaveStringToFile(Argv, '{' + #13#10 + '  "locale": "it"' + #13#10 + '}' + #13#10, False);
-    end;
-  end;
-end;
+Filename: "powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\extras\install-mydevagent.ps1"" -Pause"; StatusMsg: "Installing Python, Ollama and MyDevAgent: follow the window that just opened..."; Tasks: mydevagent; Flags: waituntilterminated
+Filename: "{app}\{#Exe}"; Description: "Launch {#StudioName}"; Flags: nowait postinstall skipifsilent

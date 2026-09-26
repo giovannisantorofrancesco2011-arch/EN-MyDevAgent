@@ -1,16 +1,16 @@
-// Vio, il polpetto viola di MyDevAgent: la stessa pixel art 14×8 del terminale (mydevagent/tui/mascot.py),
-// disegnata in SVG. Cambia espressione con la modalità e mentre lavora muove i tentacoli.
+// Vio, MyDevAgent's little purple octopus: the same 14×8 pixel art as in the terminal (mydevagent/tui/mascot.py),
+// drawn in SVG. It changes expression with the mode and moves its tentacles while working.
 (function () {
   const COLORS = {
-    P: "#a855f7", // corpo
-    D: "#581c87", // contorno e tentacoli
-    L: "#d8b4fe", // riflesso
-    K: "#1a0b2e", // occhi e bocca
-    W: "#ffffff", // luce negli occhi
-    C: "#f472b6", // guance e cuori
-    Y: "#facc15", // occhi a stella
-    B: "#67e8f9", // occhiali
-    R: "#f43f5e", // errore
+    P: "#a855f7", // body
+    D: "#581c87", // outline and tentacles
+    L: "#d8b4fe", // highlight
+    K: "#1a0b2e", // eyes and mouth
+    W: "#ffffff", // light in the eyes
+    C: "#f472b6", // cheeks and hearts
+    Y: "#facc15", // star eyes
+    B: "#67e8f9", // glasses
+    R: "#f43f5e", // error
   };
   const HEAD = [".....DDDD.....", "...DDPPPPDD...", "..DPLPPPPPPD.."];
   const EYES = {
@@ -42,19 +42,19 @@
     love: ["hearts", "smile"],
   };
   const SAYS = {
-    ask: "Ti chiedo conferma prima di ogni modifica.",
-    "auto-edit": "Modifico i file da sola, per i comandi ti chiedo.",
-    plan: "Leggo e ti propongo un piano, senza toccare niente.",
-    auto: "Faccio tutto da sola, dentro questa cartella.",
+    ask: "I ask you before every change.",
+    "auto-edit": "I edit files by myself, and ask you before commands.",
+    plan: "I read and propose a plan, without touching anything.",
+    auto: "I do everything by myself, inside this folder.",
   };
-  const PATS = ["Grazie! ♥", "Fusa da polpo in corso… ♥", "Otto tentacoli pronti a programmare! ♥", "Ancora, ancora! ♥"];
+  const PATS = ["Thanks! ♥", "Octopus purring in progress… ♥", "Eight tentacles ready to code! ♥", "More, more! ♥"];
 
   function sprite(expression, frame) {
     const [eyes, mouth] = EXPRESSIONS[expression] || EXPRESSIONS.ask;
     return HEAD.concat(EYES[eyes], [MOUTHS[mouth]], TENTACLES[frame % TENTACLES.length]);
   }
 
-  /** SVG di Vio: `size` è il lato di un pixel. */
+  /** Vio as SVG: `size` is the side of one pixel. */
   function svg(expression, frame, size) {
     const rows = sprite(expression, frame || 0);
     const px = size || 4;

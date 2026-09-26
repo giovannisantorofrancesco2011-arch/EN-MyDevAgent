@@ -1,17 +1,18 @@
-# MyDevAgent Studio: a ogni push su questo branch compila e prova l'estensione, costruisce l'installer
-# per Windows (VSCodium + MyDevAgent) e lo pubblica nella release «studio-v<versione>».
-name: MyDevAgent Studio
+# MyDevAgent Studio, English edition: on every push to this branch, builds and tests the extension, builds the
+# Windows installer (VSCodium + MyDevAgent) and publishes it in the "studio-en" release (recreated on every run).
+# It never touches the Italian edition's releases and is never marked as the latest release.
+name: MyDevAgent Studio (English)
 
 on:
   push:
-    branches: [MyDevAgent-Studio]
+    branches: [EN-Studio]
   workflow_dispatch:
 
 permissions:
   contents: write
 
 concurrency:
-  group: studio
+  group: studio-en
   cancel-in-progress: true
 
 jobs:
@@ -25,7 +26,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Estensione (compila, prova, impacchetta)
+      - name: Extension (compile, test, package)
         working-directory: extension
         run: |
           npm ci --no-audit --no-fund
@@ -33,7 +34,7 @@ jobs:
           npm test
           npm run package
 
-      - name: Studio (VSCodium + estensione + installer)
+      - name: Studio (VSCodium + extension + installer)
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
@@ -41,17 +42,17 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MyDevAgent-Studio
+          name: MyDevAgent-Studio-EN
           path: build/out/*
 
-      - name: Pubblica la release
+      - name: Publish the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $versione = (Get-Content extension/package.json -Raw | ConvertFrom-Json).version
-          $tag = "studio-v$versione"
+          $version = (Get-Content extension/package.json -Raw | ConvertFrom-Json).version
+          $tag = "studio-en"
           gh release delete $tag --cleanup-tag --yes 2>$null
-          gh release create $tag build/out/MyDevAgent-Studio-Setup.exe build/out/mydevagent.vsix `
-            --target $env:GITHUB_SHA --latest --title "MyDevAgent Studio $versione" --notes-file studio/NOTE.md
+          gh release create $tag build/out/MyDevAgent-Studio-Setup-EN.exe build/out/mydevagent-en.vsix `
+            --target $env:GITHUB_SHA --latest=false --title "MyDevAgent Studio (English) $version" --notes-file studio/NOTE.md
           if ($LASTEXITCODE) { exit $LASTEXITCODE }

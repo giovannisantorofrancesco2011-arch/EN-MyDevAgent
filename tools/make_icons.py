@@ -1,9 +1,9 @@
-"""Disegna le icone di MyDevAgent Studio partendo dalla pixel art di Vio (la stessa di media/vio.js).
+"""Draws the MyDevAgent Studio icons from Vio's pixel art (the same as in media/vio.js).
 
-    python tools/make_icons.py      (serve Pillow: pip install pillow)
+    python tools/make_icons.py      (needs Pillow: pip install pillow)
 
-Scrive le icone dell'estensione (extension/media) e quelle di Studio (studio/branding): .ico dell'app,
-tessere del menu Start, filigrana dell'editor vuoto e immagini dell'installer.
+Writes the extension icons (extension/media) and the Studio ones (studio/branding): the app .ico,
+Start menu tiles, the empty editor watermark and the installer images.
 """
 
 from pathlib import Path
@@ -15,7 +15,7 @@ MEDIA = ROOT / "extension" / "media"
 BRANDING = ROOT / "studio" / "branding"
 
 COLORS = {"P": "#a855f7", "D": "#581c87", "L": "#d8b4fe", "K": "#1a0b2e", "W": "#ffffff", "C": "#f472b6"}
-VIO = [  # espressione «ask»: occhi aperti e sorriso
+VIO = [  # "ask" expression: open eyes and a smile
     ".....DDDD.....",
     "...DDPPPPDD...",
     "..DPLPPPPPPD..",
@@ -25,7 +25,7 @@ VIO = [  # espressione «ask»: occhi aperti e sorriso
     "DPDPDPPPPDPDPD",
     "D.P.P.DD.P.P.D",
 ]
-BODY = set("PDLC")  # nella sagoma: gli occhi e la bocca restano buchi
+BODY = set("PDLC")  # in the silhouette: the eyes and mouth stay holes
 
 
 def rgb(color: str) -> tuple[int, int, int]:
@@ -60,7 +60,7 @@ def glow(size: tuple[int, int], center: tuple[int, int], radius: int, color: str
 
 
 def app_icon(size: int) -> Image.Image:
-    """Quadrato arrotondato nero-viola con Vio al centro, disegnato per ogni misura (niente pixel sfocati)."""
+    """Black-purple rounded square with Vio in the middle, drawn for each size (no blurry pixels)."""
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     mask = Image.new("L", (size, size), 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], radius=round(size * 0.22), fill=255)
@@ -77,7 +77,7 @@ def app_icon(size: int) -> Image.Image:
 
 
 def silhouette_svg(color: str, opacity: float, pad: int = 3) -> str:
-    """Vio come sagoma di un solo colore: occhi e bocca sono buchi."""
+    """Vio as a single-color silhouette: the eyes and mouth are holes."""
     rects = "".join(f'<rect x="{x}" y="{y + pad}" width="1.02" height="1.02"/>'
                     for y, row in enumerate(VIO) for x, cell in enumerate(row) if cell in BODY)
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 {8 + 2 * pad}" shape-rendering="crispEdges">'
@@ -123,7 +123,7 @@ def main() -> None:
     big = Image.new("RGB", (110, 110), rgb("#0b0714"))
     big.paste(app_icon(110), (0, 0), app_icon(110))
     big.save(BRANDING / "wizard-small-2x.bmp")
-    print("icone scritte in", MEDIA.relative_to(ROOT), "e", BRANDING.relative_to(ROOT))
+    print("icons written to", MEDIA.relative_to(ROOT), "and", BRANDING.relative_to(ROOT))
 
 
 if __name__ == "__main__":

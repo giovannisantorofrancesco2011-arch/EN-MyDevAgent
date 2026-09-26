@@ -1,16 +1,16 @@
-**MyDevAgent Studio** è l'editor di codice con Vio: basato su VSCodium, con MyDevAgent come agente principale.
+**MyDevAgent Studio (English edition)** is the code editor with Vio: based on VSCodium, with MyDevAgent as its main agent. It can be installed next to the Italian edition.
 
-### Come si installa
-1. Scarica **MyDevAgent-Studio-Setup.exe** qui sotto e aprilo.
-2. Windows potrebbe dire «Windows ha protetto il PC» (l'installer non è firmato): clicca **Ulteriori informazioni** e poi **Esegui comunque**.
-3. Lascia la spunta su «Installa anche Python, Ollama e MyDevAgent se mancano»: si apre una finestra che scarica quello che serve (la prima volta i modelli pesano qualche GB).
-4. Apri MyDevAgent Studio, apri la cartella del tuo progetto e parla con Vio nella barra a sinistra. Quando Studio chiede se ti fidi della cartella, rispondi sì: nelle cartelle non fidate Vio non lavora.
+### How to install
+1. Download **MyDevAgent-Studio-Setup-EN.exe** below and open it.
+2. Windows might say "Windows protected your PC" (the installer is not signed): click **More info** and then **Run anyway**.
+3. Leave "Also install Python, Ollama and MyDevAgent if they are missing" checked: a window opens and downloads what is needed (the first time, the models take a few GB).
+4. Open MyDevAgent Studio, open your project folder and talk to Vio in the left sidebar. When Studio asks whether you trust the folder, answer yes: Vio does not work in untrusted folders.
 
-### Cosa c'è
-- Chat con Vio: legge il progetto, modifica i file e lancia i test; tu confermi ogni modifica vedendo il confronto prima/dopo.
-- **Ctrl+I** sul codice selezionato (o dove vuoi del codice nuovo): Vio lo scrive come chiedi; **Ctrl+Invio** per tenerlo, **Esc** per annullare.
-- **Tab**: suggerimenti di codice mentre scrivi.
-- `/stats`, `/undo`, `/diff`, i team di agenti e tutti i comandi di MyDevAgent.
-- Tema nero e viola, interfaccia in italiano.
+### What's inside
+- Chat with Vio: it reads the project, edits files and runs the tests; you confirm every change by looking at the before/after comparison.
+- **Ctrl+I** on the selected code (or wherever you want new code): Vio writes it the way you ask; **Ctrl+Enter** to keep it, **Esc** to undo.
+- **Tab**: code suggestions while you type.
+- `/stats`, `/undo`, `/diff`, the agent teams and all of MyDevAgent's commands.
+- Black and purple theme, English interface.
 
-`mydevagent.vsix` è la stessa estensione per chi usa già VS Code o VSCodium.
+`mydevagent-en.vsix` is the same extension for people who already use VS Code or VSCodium.

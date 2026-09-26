@@ -1,5 +1,5 @@
-// Ctrl+I: Vio riscrive la selezione (o scrive codice nuovo al cursore) direttamente nel file.
-// La modifica resta evidenziata finché non la tieni (Ctrl+Invio) o la annulli (Esc).
+// Ctrl+I: Vio rewrites the selection (or writes new code at the cursor) directly in the file.
+// The edit stays highlighted until you keep it (Ctrl+Enter) or discard it (Esc).
 import * as vscode from "vscode";
 import { BridgeError } from "./bridge";
 import type { Chat } from "./chat";
@@ -30,7 +30,7 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
   constructor(private readonly chat: Chat) {
     this.subscriptions = [
       vscode.workspace.onDidChangeTextDocument((e) => {
-        // ponytail: qualsiasi altra modifica al file (anche un Ctrl+Z) vale come «tieni»: niente range da inseguire
+        // ponytail: any other change to the file (even a Ctrl+Z) counts as "keep": no range to track
         if (this.pending && e.document === this.pending.doc && e.document.version !== this.pending.version && !this.undoing) {
           this.clear();
         }
@@ -44,7 +44,7 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
     const editor = vscode.window.activeTextEditor;
     if (!editor) return;
     if (!this.chat.state.connected) {
-      void vscode.window.showWarningMessage("Vio non è ancora collegata: apri la sua chat per vedere cosa manca.");
+      void vscode.window.showWarningMessage("Vio is not connected yet: open the chat to see what is missing.");
       this.chat.reveal();
       return;
     }
@@ -52,14 +52,14 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
     const doc = editor.document;
     const sel = editor.selection;
     let range: vscode.Range = sel;
-    if (!sel.isEmpty) { // righe intere: il modello rispetta meglio l'indentazione
+    if (!sel.isEmpty) { // whole lines: the model respects indentation better
       const last = sel.end.character === 0 && sel.end.line > sel.start.line ? sel.end.line - 1 : sel.end.line;
       range = new vscode.Range(sel.start.line, 0, last, doc.lineAt(last).text.length);
     }
     const instruction = await vscode.window.showInputBox({
-      title: "Modifica con Vio",
-      prompt: sel.isEmpty ? "Cosa devo scrivere qui?" : "Cosa devo cambiare nel codice selezionato?",
-      placeHolder: sel.isEmpty ? "es. una funzione che legge un CSV e restituisce le righe" : "es. aggiungi i tipi e gestisci gli errori",
+      title: "Edit with Vio",
+      prompt: sel.isEmpty ? "What should I write here?" : "What should I change in the selected code?",
+      placeHolder: sel.isEmpty ? "e.g. a function that reads a CSV and returns the rows" : "e.g. add types and handle errors",
       ignoreFocusOut: true,
     });
     if (!instruction?.trim()) return;
@@ -70,7 +70,7 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
     const after = doc.getText(new vscode.Range(range.end, doc.lineAt(lastLine).range.end));
     let text: string | undefined;
     try {
-      text = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Vio sta scrivendo…",
+      text = await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: "Vio is writing…",
         cancellable: true }, (_progress, token) => Promise.race([
         this.chat.bridge.request<{ text: string }>("inline_edit", { path: this.chat.relative(doc.uri.fsPath),
           language: doc.languageId, before, selection: original, after, instruction }).then((r) => r.text),
@@ -78,12 +78,12 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
       ]));
     } catch (error) {
       const message = error instanceof BridgeError ? `${error.message}${error.hint ? ` (${error.hint})` : ""}` : String(error);
-      void vscode.window.showErrorMessage(`Vio non è riuscita a modificare il codice: ${message}`);
+      void vscode.window.showErrorMessage(`Vio could not edit the code: ${message}`);
       return;
     }
     if (text === undefined) return;
     if (doc.version !== version) {
-      void vscode.window.showWarningMessage("Il file è cambiato mentre Vio scriveva: riprova.");
+      void vscode.window.showWarningMessage("The file changed while Vio was writing: try again.");
       return;
     }
     if (!(await editor.edit((edit) => edit.replace(range, text!)))) return;
@@ -128,7 +128,7 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
       editor.setDecorations(this.added, mine && hasText ? [{
         range: range.end.character === 0 && range.end.line > range.start.line ? range.with({ end: range.end.translate(-1) }) : range,
         hoverMessage: this.pending!.original
-          ? new vscode.MarkdownString().appendMarkdown("**Prima era così:**").appendCodeblock(this.pending!.original, this.pending!.doc.languageId)
+          ? new vscode.MarkdownString().appendMarkdown("**Before:**").appendCodeblock(this.pending!.original, this.pending!.doc.languageId)
           : undefined,
       }] : []);
     }
@@ -141,9 +141,9 @@ export class InlineEdit implements vscode.CodeLensProvider, vscode.Disposable {
     const added = lines(doc.getText(this.pending.range));
     const removed = lines(this.pending.original);
     return [
-      new vscode.CodeLens(at, { title: "$(check) Tieni (Ctrl+Invio)", command: "mydevagent.acceptInline" }),
-      new vscode.CodeLens(at, { title: "$(discard) Annulla (Esc)", command: "mydevagent.rejectInline" }),
-      new vscode.CodeLens(at, { title: `Vio: −${removed} +${added} righe`, command: "" }),
+      new vscode.CodeLens(at, { title: "$(check) Keep (Ctrl+Enter)", command: "mydevagent.acceptInline" }),
+      new vscode.CodeLens(at, { title: "$(discard) Discard (Esc)", command: "mydevagent.rejectInline" }),
+      new vscode.CodeLens(at, { title: `Vio: −${removed} +${added} lines`, command: "" }),
     ];
   }
 

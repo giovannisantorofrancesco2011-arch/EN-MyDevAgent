@@ -1,4 +1,4 @@
-// MyDevAgent dentro l'editor: la chat di Vio, le modifiche da confermare, Ctrl+I e Tab.
+// MyDevAgent inside the editor: Vio's chat, changes to confirm, Ctrl+I and Tab.
 import * as vscode from "vscode";
 import { Bridge } from "./bridge";
 import { Chat, SCHEME } from "./chat";
@@ -17,11 +17,11 @@ export function activate(context: vscode.ExtensionContext): void {
   tabStatus.command = "mydevagent.toggleTab";
   const paint = () => {
     const { connected, busy, model } = chat.state;
-    status.text = !connected ? "$(circle-slash) Vio" : busy ? "$(loading~spin) Vio sta lavorando" : "$(hubot) Vio";
-    status.tooltip = connected ? `Vio è pronta (${model}) · Ctrl+L per la chat` : "Vio non è collegata: clic per vedere perché";
-    const on = vscode.workspace.getConfiguration("mydevagent").get("tab.attivo", true);
+    status.text = !connected ? "$(circle-slash) Vio" : busy ? "$(loading~spin) Vio is working" : "$(hubot) Vio";
+    status.tooltip = connected ? `Vio is ready (${model}) · Ctrl+L for the chat` : "Vio is not connected: click to see why";
+    const on = vscode.workspace.getConfiguration("mydevagent").get("tab.enabled", true);
     tabStatus.text = on ? "$(sparkle) Tab" : "$(circle-slash) Tab";
-    tabStatus.tooltip = on ? "Suggerimenti con Tab attivi (clic per spegnerli)" : "Suggerimenti con Tab spenti (clic per accenderli)";
+    tabStatus.tooltip = on ? "Tab suggestions on (click to turn them off)" : "Tab suggestions off (click to turn them on)";
     status.show();
     tabStatus.show();
   };
@@ -69,8 +69,8 @@ export function activate(context: vscode.ExtensionContext): void {
     command("mydevagent.rejectInline", () => inline.reject()),
     command("mydevagent.approve", (uri?: vscode.Uri) => chat.answer(chat.requestFor(uri), "yes", "")),
     command("mydevagent.reject", async (uri?: vscode.Uri) => {
-      const feedback = await vscode.window.showInputBox({ title: "Rifiuta la modifica",
-        prompt: "Cosa deve fare Vio invece? (facoltativo: Invio per rifiutare e basta)" });
+      const feedback = await vscode.window.showInputBox({ title: "Reject the change",
+        prompt: "What should Vio do instead? (optional: press Enter to just reject)" });
       if (feedback !== undefined) await chat.answer(chat.requestFor(uri), "no", feedback);
     }),
     command("mydevagent.stop", () => bridge.request("cancel").catch(() => undefined)),
@@ -79,7 +79,7 @@ export function activate(context: vscode.ExtensionContext): void {
     command("mydevagent.newChat", () => chatCommand("clear")),
     command("mydevagent.toggleTab", () => {
       const config = vscode.workspace.getConfiguration("mydevagent");
-      return config.update("tab.attivo", !config.get("tab.attivo", true), vscode.ConfigurationTarget.Global);
+      return config.update("tab.enabled", !config.get("tab.enabled", true), vscode.ConfigurationTarget.Global);
     }),
     command("mydevagent.restart", () => chat.connect()),
     command("mydevagent.install", () => chat.handle({ type: "action", id: "install" })),
@@ -89,5 +89,5 @@ export function activate(context: vscode.ExtensionContext): void {
 }
 
 export function deactivate(): void {
-  // il ponte si chiude con le subscriptions
+  // the bridge is closed with the subscriptions
 }

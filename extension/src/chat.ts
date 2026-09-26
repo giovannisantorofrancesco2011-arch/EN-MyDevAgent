@@ -1,5 +1,5 @@
-// La chat di Vio: collega il pannello (media/chat.js) al ponte, apre i diff delle modifiche proposte e
-// guida il primo avvio (MyDevAgent da installare, Ollama spento, modelli da scaricare).
+// Vio's chat: connects the panel (media/chat.js) to the bridge, opens the diffs of proposed changes and
+// guides the first start (MyDevAgent to install, Ollama not running, models to download).
 import { spawn } from "child_process";
 import * as crypto from "crypto";
 import * as fs from "fs";
@@ -19,7 +19,7 @@ interface Approval {
   diff: string;
 }
 
-export const SCHEME = "mydevagent-proposta";
+export const SCHEME = "mydevagent-proposal";
 export const TAB_MODEL = "qwen2.5-coder:1.5b-base";
 const WIN = process.platform === "win32";
 const IGNORE = "**/{node_modules,.git,.venv,venv,__pycache__,dist,build,out,.mydevagent}/**";
@@ -39,7 +39,7 @@ export class Chat implements vscode.WebviewViewProvider, vscode.TextDocumentCont
   private transcript: { role: string; content: string }[] = [];
   private setupCard?: Msg;
   private approvals = new Map<string, Approval>();
-  private proposals = new Map<string, string>(); // uri → testo dei documenti prima/dopo
+  private proposals = new Map<string, string>(); // uri → text of the before/after documents
   private files: string[] = [];
   private missing: string[] = [];
   private lastPrompt = "";
@@ -61,7 +61,7 @@ export class Chat implements vscode.WebviewViewProvider, vscode.TextDocumentCont
     bridge.onExit((tail) => this.onCrash(tail));
   }
 
-  // ------------------------------------------------------------------ pannello
+  // -------------------------------------------------------------------- panel
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
     this.ready = false;
@@ -79,7 +79,7 @@ export class Chat implements vscode.WebviewViewProvider, vscode.TextDocumentCont
     const nonce = crypto.randomBytes(16).toString("base64");
     const script = (file: string) => `<script nonce="${nonce}" src="${uri(file)}"></script>`;
     return `<!DOCTYPE html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
@@ -89,15 +89,15 @@ export class Chat implements vscode.WebviewViewProvider, vscode.TextDocumentCont
 <body>
 <div id="app">
   <header class="top">
-    <div id="vio" class="vio" title="Accarezzami!"></div>
+    <div id="vio" class="vio" title="Pet me!"></div>
     <div class="who">
       <div class="name">Vio <span id="dot" class="dot off"></span><span id="model" class="model"></span></div>
       <div id="says" class="says"></div>
     </div>
     <div class="actions">
-      <button class="icon" data-cmd="stats" title="Statistiche (/stats)"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 13h12v1.2H2zM3 8h2.2v4H3zm3.9-4h2.2v8H6.9zm3.9 2H13v6h-2.2z"/></svg></button>
-      <button class="icon" data-cmd="undo" title="Annulla le ultime modifiche di Vio (/undo)"><svg viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4.5 6.5h5.5a3.25 3.25 0 0 1 0 6.5H6"/><path fill="currentColor" d="M1.5 6.5 5.5 3v7z"/></svg></button>
-      <button class="icon" data-cmd="clear" title="Nuova chat (/clear)"><svg viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 3v10M3 8h10"/></svg></button>
+      <button class="icon" data-cmd="stats" title="Statistics (/stats)"><svg viewBox="0 0 16 16"><path fill="currentColor" d="M2 13h12v1.2H2zM3 8h2.2v4H3zm3.9-4h2.2v8H6.9zm3.9 2H13v6h-2.2z"/></svg></button>
+      <button class="icon" data-cmd="undo" title="Undo Vio's last changes (/undo)"><svg viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M4.5 6.5h5.5a3.25 3.25 0 0 1 0 6.5H6"/><path fill="currentColor" d="M1.5 6.5 5.5 3v7z"/></svg></button>
+      <button class="icon" data-cmd="clear" title="New chat (/clear)"><svg viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" d="M8 3v10M3 8h10"/></svg></button>
     </div>
   </header>
   <main id="log"></main>
@@ -105,12 +105,12 @@ export class Chat implements vscode.WebviewViewProvider, vscode.TextDocumentCont
     <div id="context" class="context"></div>
     <div class="box">
       <div id="menu" class="menu hidden"></div>
-      <textarea id="input" rows="1" placeholder="Chiedi a Vio… (/ comandi, @ file)"></textarea>
+      <textarea id="input" rows="1" placeholder="Ask Vio… (/ commands, @ files)"></textarea>
       <div class="bar">
-        <select id="permission" title="Cosa può fare Vio senza chiedere"></select>
-        <select id="team" title="Quanti agenti lavorano alla richiesta"></select>
+        <select id="permission" title="What Vio can do without asking"></select>
+        <select id="team" title="How many agents work on the request"></select>
         <span class="spacer"></span>
-        <button id="send" class="send" title="Invia"></button>
+        <button id="send" class="send" title="Send"></button>
       </div>
     </div>
     <div id="hint" class="hint"></div>
@@ -127,7 +127,7 @@ ${script("chat.js")}
     if (this.view && this.ready) void this.view.webview.postMessage(message);
   }
 
-  /** Il pannello si è (ri)caricato: gli rimando quello che deve sapere. */
+  /** The panel has (re)loaded: send it again what it needs to know. */
   private onReady(): void {
     this.ready = true;
     this.post({ type: "state", state: this.state });
@@ -135,7 +135,7 @@ ${script("chat.js")}
     if (this.setupCard) this.post(this.setupCard);
     this.post({ type: "files", files: this.files });
     this.postContext();
-    // ponytail: un turno in corso non viene ridisegnato se il pannello si ricarica (succede solo spostandolo)
+    // ponytail: a turn in progress is not redrawn if the panel reloads (only happens when moving it)
   }
 
   reveal(focusInput = false): void {
@@ -160,7 +160,7 @@ ${script("chat.js")}
     this.stateEmitter.fire();
   }
 
-  // ------------------------------------------------------------ collegamento
+  // --------------------------------------------------------------- connection
   connect(): Promise<void> {
     if (!this.connecting) this.connecting = this.doConnect().finally(() => (this.connecting = undefined));
     return this.connecting;
@@ -169,35 +169,35 @@ ${script("chat.js")}
   private async doConnect(): Promise<void> {
     this.bridge.stop();
     this.setState({ connected: false, busy: false });
-    const folder = vscode.workspace.workspaceFolders?.[0]; // ponytail: con più cartelle aperte lavora nella prima
+    const folder = vscode.workspace.workspaceFolders?.[0]; // ponytail: with several folders open, work in the first one
     if (!folder || folder.uri.scheme !== "file") {
-      return this.setup("info", "Apri una cartella", "Lavoro dentro la cartella del tuo progetto: aprine una e cominciamo.",
-        [{ id: "open-folder", label: "Apri una cartella", primary: true }], "Apri una cartella e cominciamo!");
+      return this.setup("info", "Open a folder", "I work inside your project folder: open one and let's get started.",
+        [{ id: "open-folder", label: "Open a folder", primary: true }], "Open a folder and let's get started!");
     }
-    if (!vscode.workspace.isTrusted) { // modalità protetta: si ricollega da sola quando ti fidi (extension.ts)
-      return this.setup("info", "Questa cartella non è ancora fidata",
-        "Studio l'ha aperta in modalità protetta: finché non ti fidi, io non leggo, non modifico e non lancio niente qui dentro.",
-        [{ id: "trust-folder", label: "Mi fido di questa cartella", primary: true }], "Posso lavorare qui? Dimmi che ti fidi.");
+    if (!vscode.workspace.isTrusted) { // restricted mode: reconnects by itself when you trust the folder (extension.ts)
+      return this.setup("info", "This folder is not trusted yet",
+        "Studio opened it in Restricted Mode: until you trust it, I don't read, edit or run anything in here.",
+        [{ id: "trust-folder", label: "I trust this folder", primary: true }], "Can I work here? Tell me you trust it.");
     }
     this.root = folder.uri.fsPath;
-    this.install = locate(config().get("percorso", ""));
+    this.install = locate(config().get("path", ""));
     if (!this.install) {
-      return this.setup("error", "Non trovo MyDevAgent", WIN
-        ? "Posso installarlo io: scarico Python, Ollama, MyDevAgent e i modelli (serve Internet e qualche GB di spazio). Se ce l'hai già, dimmi dov'è."
-        : "Installalo seguendo il README di MyDevAgent, oppure dimmi in che cartella si trova.",
-      [...(WIN ? [{ id: "install", label: "Installa MyDevAgent", primary: true }] : []),
-        { id: "choose-folder", label: "Ce l'ho già: scegli la cartella" }], "Mi manca il mio cervello: MyDevAgent!");
+      return this.setup("error", "I can't find MyDevAgent", WIN
+        ? "I can install it for you: I'll download Python, Ollama, MyDevAgent and the models (needs Internet and a few GB of space). If you already have it, tell me where it is."
+        : "Install it by following MyDevAgent's README, or tell me which folder it is in.",
+      [...(WIN ? [{ id: "install", label: "Install MyDevAgent", primary: true }] : []),
+        { id: "choose-folder", label: "I already have it: choose the folder" }], "I'm missing my brain: MyDevAgent!");
     }
-    this.setup("info", "Mi sto svegliando…", "Avvio MyDevAgent e controllo i modelli.", [], "Mi sto svegliando…");
+    this.setup("info", "Waking up…", "Starting MyDevAgent and checking the models.", [], "Waking up…");
     let hello: any;
     try {
-      await this.bridge.start(this.install, this.root, config().get("profilo", ""));
-      hello = await this.bridge.request("hello", { resume: true, permission: config().get("permessi", "ask") });
+      await this.bridge.start(this.install, this.root, config().get("profile", ""));
+      hello = await this.bridge.request("hello", { resume: true, permission: config().get("permissions", "ask") });
       await this.bridge.request("set", { team: config().get("team", "auto") });
     } catch (error) {
       const { message, hint } = errorInfo(error);
-      return this.setup("error", message, hint || "Guarda il registro per i dettagli.",
-        [{ id: "retry", label: "Riprova", primary: true }, { id: "log", label: "Mostra il registro" }], "Non riesco a svegliarmi…");
+      return this.setup("error", message, hint || "Check the log for details.",
+        [{ id: "retry", label: "Try again", primary: true }, { id: "log", label: "Show the log" }], "I can't wake up…");
     }
     this.ollama = hello.ollama;
     this.transcript = hello.history;
@@ -209,10 +209,10 @@ ${script("chat.js")}
     if (await this.checkHealth()) this.askTrust(hello.untrusted);
   }
 
-  /** Ollama acceso e modelli presenti? Se manca qualcosa lo dice nella chat, con il pulsante per sistemarlo. */
+  /** Is Ollama running and are the models there? If something is missing, say so in the chat, with a button to fix it. */
   private async checkHealth(): Promise<boolean> {
     const ok = await this.health();
-    this.setState({ connected: ok }); // pronta solo con i modelli: senza, chat, Ctrl+I e Tab aspettano
+    this.setState({ connected: ok }); // ready only with the models: without them, chat, Ctrl+I and Tab wait
     return ok;
   }
 
@@ -225,22 +225,22 @@ ${script("chat.js")}
       return false;
     }
     if (health.down.length) {
-      this.setup("error", this.ollama ? "Ollama non risponde" : "Il server dei modelli non risponde", this.ollama
-        ? "Ollama è il programma che fa girare i modelli sul tuo computer: avvialo e riprovo."
-        : `Non riesco a raggiungere ${health.down.join(", ")}: avvia il server e riprova.`,
-      [...(this.ollama ? [{ id: "start-ollama", label: "Avvia Ollama", primary: true }] : []),
-        { id: "retry", label: "Riprova", primary: !this.ollama }], "I modelli dormono…");
+      this.setup("error", this.ollama ? "Ollama is not responding" : "The model server is not responding", this.ollama
+        ? "Ollama is the program that runs the models on your computer: start it and I'll try again."
+        : `I can't reach ${health.down.join(", ")}: start the server and try again.`,
+      [...(this.ollama ? [{ id: "start-ollama", label: "Start Ollama", primary: true }] : []),
+        { id: "retry", label: "Try again", primary: !this.ollama }], "The models are asleep…");
       return false;
     }
     this.missing = [...new Set<string>(health.missing.filter((m: any) => m.tier !== "vision").map((m: any) => m.model))];
     if (this.missing.length) {
-      this.setup("info", "Mi mancano dei modelli", `Per lavorare mi servono **${this.missing.join(", ")}**. ` +
-        "Li scarico da Ollama una volta sola: possono volerci alcuni minuti.",
-      [{ id: "pull", label: "Scarica i modelli", primary: true }], "Mi servono i miei modelli!");
+      this.setup("info", "Some models are missing", `To work I need **${this.missing.join(", ")}**. ` +
+        "I'll download them from Ollama just once: it can take a few minutes.",
+      [{ id: "pull", label: "Download the models", primary: true }], "I need my models!");
       return false;
     }
     this.setup("none");
-    this.say(`Ciao! Sono pronta: lavoro in ${path.basename(this.root || "")}.`, "done", 6);
+    this.say(`Hi! I'm ready: working in ${path.basename(this.root || "")}.`, "done", 6);
     void this.suggestTabModel(health.has[TAB_MODEL]);
     return true;
   }
@@ -248,20 +248,20 @@ ${script("chat.js")}
   private askTrust(untrusted: { hooks: string[]; mcp: string[] }): void {
     const items = [...untrusted.hooks.map((h) => `hook ${h}`), ...untrusted.mcp.map((m) => `server MCP ${m}`)];
     if (!items.length) return;
-    this.setup("info", "Questo progetto vuole attivare dei comandi",
-      `Il progetto ha: ${items.map((i) => `\`${i}\``).join(", ")}. Attivali solo se ti fidi di chi ha scritto il progetto.`,
-      [{ id: "trust", label: "Mi fido, attivali" }, { id: "dismiss", label: "No" }]);
+    this.setup("info", "This project wants to enable some commands",
+      `The project has: ${items.map((i) => `\`${i}\``).join(", ")}. Enable them only if you trust whoever wrote the project.`,
+      [{ id: "trust", label: "I trust it, enable them" }, { id: "dismiss", label: "No" }]);
   }
 
   private async suggestTabModel(installed: boolean): Promise<void> {
-    if (!this.ollama || config().get("tab.modello", "")) return;
-    if (installed) return void config().update("tab.modello", TAB_MODEL, vscode.ConfigurationTarget.Global);
+    if (!this.ollama || config().get("tab.model", "")) return;
+    if (installed) return void config().update("tab.model", TAB_MODEL, vscode.ConfigurationTarget.Global);
     if (this.context.globalState.get("tabModelAsked")) return;
     await this.context.globalState.update("tabModelAsked", true);
     const choice = await vscode.window.showInformationMessage(
-      `Per i suggerimenti con Tab funziona meglio il modello ${TAB_MODEL} (circa 1 GB). Lo scarico?`, "Scarica", "No grazie");
-    if (choice !== "Scarica") return;
-    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Scarico ${TAB_MODEL}` },
+      `Tab suggestions work best with the ${TAB_MODEL} model (about 1 GB). Download it?`, "Download", "No thanks");
+    if (choice !== "Download") return;
+    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Downloading ${TAB_MODEL}` },
       async (progress) => {
         let last = 0;
         this.pullListener = (p) => {
@@ -271,9 +271,9 @@ ${script("chat.js")}
         };
         try {
           await this.bridge.request("pull", { models: [TAB_MODEL] });
-          await config().update("tab.modello", TAB_MODEL, vscode.ConfigurationTarget.Global);
+          await config().update("tab.model", TAB_MODEL, vscode.ConfigurationTarget.Global);
         } catch (error) {
-          void vscode.window.showErrorMessage(`Download non riuscito: ${errorInfo(error).message}`);
+          void vscode.window.showErrorMessage(`Download failed: ${errorInfo(error).message}`);
         } finally {
           this.pullListener = undefined;
         }
@@ -283,13 +283,13 @@ ${script("chat.js")}
   private onCrash(tail: string): void {
     const busy = this.state.busy;
     this.setState({ connected: false, busy: false });
-    if (busy) this.post({ type: "turnEnd", answer: "", cancelled: false, error: { message: "MyDevAgent si è chiuso", hint: tail } });
-    this.setup("error", "MyDevAgent si è chiuso", tail || "Guarda il registro per i dettagli.",
-      [{ id: "retry", label: "Riavvia", primary: true }, { id: "log", label: "Mostra il registro" }], "Ahi, mi sono addormentata!");
+    if (busy) this.post({ type: "turnEnd", answer: "", cancelled: false, error: { message: "MyDevAgent exited", hint: tail } });
+    this.setup("error", "MyDevAgent exited", tail || "Check the log for details.",
+      [{ id: "retry", label: "Restart", primary: true }, { id: "log", label: "Show the log" }], "Oops, I fell asleep!");
   }
 
-  // ------------------------------------------------------- dal pannello
-  /** Un messaggio dal pannello (o da un comando dell'editor): gli errori finiscono nella chat. */
+  // ---------------------------------------------------------- from the panel
+  /** A message from the panel (or from an editor command): errors end up in the chat. */
   async handle(m: Msg): Promise<void> {
     try {
       switch (m.type) {
@@ -318,11 +318,11 @@ ${script("chat.js")}
 
   async send(text: string, withContext: boolean): Promise<void> {
     if (!this.state.connected) {
-      this.showError(new BridgeError("Non sono ancora collegata", "Guarda il messaggio qui sopra per sistemare."),
-        [{ id: "retry", label: "Riprova a collegarti" }]);
+      this.showError(new BridgeError("I'm not connected yet", "See the message above to fix it."),
+        [{ id: "retry", label: "Try to connect again" }]);
       return;
     }
-    if (config().get("salvaPrimaDiInviare", true)) await vscode.workspace.saveAll(false);
+    if (config().get("saveBeforeSend", true)) await vscode.workspace.saveAll(false);
     this.lastPrompt = text;
     this.post({ type: "user", text });
     this.setState({ busy: true });
@@ -340,14 +340,14 @@ ${script("chat.js")}
     for (const key of ["permission", "team", "learn"]) if (key in m) change[key] = m[key];
     this.setState(change);
     if (this.bridge.running) await this.bridge.request("set", change);
-    if ("permission" in change) await config().update("permessi", change.permission, vscode.ConfigurationTarget.Global);
+    if ("permission" in change) await config().update("permissions", change.permission, vscode.ConfigurationTarget.Global);
     if ("team" in change) await config().update("team", change.team, vscode.ConfigurationTarget.Global);
   }
 
-  /** L'utente ha cambiato le impostazioni a mano. */
+  /** The user changed the settings by hand. */
   async onConfig(e: vscode.ConfigurationChangeEvent): Promise<void> {
-    if (e.affectsConfiguration("mydevagent.percorso") || e.affectsConfiguration("mydevagent.profilo")) return this.connect();
-    const permission = config().get("permessi", "ask");
+    if (e.affectsConfiguration("mydevagent.path") || e.affectsConfiguration("mydevagent.profile")) return this.connect();
+    const permission = config().get("permissions", "ask");
     const team = config().get("team", "auto");
     if (permission !== this.state.permission || team !== this.state.team) await this.set({ type: "set", permission, team });
   }
@@ -355,21 +355,21 @@ ${script("chat.js")}
   private async command(name: string, days?: number): Promise<void> {
     if (name === "undo") {
       const undone = await this.bridge.request("undo");
-      this.post({ type: "notice", text: undone ? `↩ Annullate le modifiche di «${undone.label}»: ${undone.files.join(", ")}`
-        : "Niente da annullare." });
-      if (undone) this.say("Fatto: ho rimesso tutto com'era.", "done", 4);
+      this.post({ type: "notice", text: undone ? `↩ Undid the changes of "${undone.label}": ${undone.files.join(", ")}`
+        : "Nothing to undo." });
+      if (undone) this.say("Done: I put everything back the way it was.", "done", 4);
     } else if (name === "diff") {
       const { diff } = await this.bridge.request("diff");
-      if (!diff.trim()) return this.post({ type: "notice", text: "Nessuna modifica in questa sessione." });
+      if (!diff.trim()) return this.post({ type: "notice", text: "No changes in this session." });
       await vscode.window.showTextDocument(await vscode.workspace.openTextDocument({ language: "diff", content: diff }));
     } else if (name === "clear") {
       await this.bridge.request("clear");
       this.transcript = [];
       this.post({ type: "reset" });
-      this.say("Chat nuova: dimmi pure!", "done", 4);
+      this.say("New chat: go ahead!", "done", 4);
     } else if (name === "stats") {
       const result = await this.bridge.request("stats", days ? { days } : {});
-      this.post({ type: "stats", ...result, label: days ? `ultimi ${days} giorni` : "da sempre" });
+      this.post({ type: "stats", ...result, label: days ? `last ${days} days` : "all time" });
     }
   }
 
@@ -379,9 +379,9 @@ ${script("chat.js")}
       case "install": return this.runInstaller();
       case "choose-folder": {
         const picked = await vscode.window.showOpenDialog({ canSelectFolders: true, canSelectFiles: false,
-          title: "Dov'è la cartella di MyDevAgent? (quella con .venv)" });
-        if (picked) await config().update("percorso", picked[0].fsPath, vscode.ConfigurationTarget.Global);
-        return; // onConfig si ricollega
+          title: "Where is the MyDevAgent folder? (the one with .venv)" });
+        if (picked) await config().update("path", picked[0].fsPath, vscode.ConfigurationTarget.Global);
+        return; // onConfig reconnects
       }
       case "retry": return this.connect();
       case "trust-folder": return void vscode.commands.executeCommand("workbench.trust.manage");
@@ -391,20 +391,20 @@ ${script("chat.js")}
       case "trust":
         await this.bridge.request("trust");
         this.setup("none");
-        return this.say("Ok, ho attivato gli hook e i server MCP del progetto.", "done", 5);
+        return this.say("OK, I enabled the project's hooks and MCP servers.", "done", 5);
       case "dismiss": return this.setup("none");
       case "retry-last": if (this.lastPrompt) this.post({ type: "fill", text: this.lastPrompt });
     }
   }
 
   private async pullMissing(): Promise<void> {
-    this.setup("info", "Scarico i modelli…", "Puoi continuare a usare l'editor mentre scarico.", [], "Scarico i miei modelli…");
+    this.setup("info", "Downloading the models…", "You can keep using the editor while I download.", [], "Downloading my models…");
     try {
       await this.bridge.request("pull", { models: this.missing });
     } catch (error) {
       const { message, hint } = errorInfo(error);
-      return this.setup("error", "Download non riuscito", `${message}${hint ? `: ${hint}` : ""}`,
-        [{ id: "pull", label: "Riprova", primary: true }]);
+      return this.setup("error", "Download failed", `${message}${hint ? `: ${hint}` : ""}`,
+        [{ id: "pull", label: "Try again", primary: true }]);
     }
     await this.checkHealth();
   }
@@ -413,25 +413,25 @@ ${script("chat.js")}
     const app = WIN ? path.join(process.env.LOCALAPPDATA || "", "Programs", "Ollama", "ollama app.exe") : "";
     const [command, args] = app && fs.existsSync(app) ? [app, []] : ["ollama", ["serve"]];
     const proc = spawn(command, args, { detached: true, stdio: "ignore", windowsHide: true });
-    proc.on("error", (error) => this.log.appendLine(`Ollama non parte: ${error.message}`));
+    proc.on("error", (error) => this.log.appendLine(`Ollama does not start: ${error.message}`));
     proc.unref();
-    this.setup("info", "Avvio Ollama…", "Un attimo…", [], "Sveglio Ollama…");
+    this.setup("info", "Starting Ollama…", "Just a moment…", [], "Waking Ollama up…");
     for (let i = 0; i < 10; i++) {
       await sleep(1500);
       const health = await this.bridge.request("health").catch(() => undefined);
       if (health && !health.down.length) break;
     }
-    if (await this.checkHealth()) this.say("Ollama è sveglio: possiamo lavorare!", "done", 5);
+    if (await this.checkHealth()) this.say("Ollama is awake: let's get to work!", "done", 5);
   }
 
   private async runInstaller(): Promise<void> {
-    const script = path.join(this.context.extensionPath, "setup", "installa-mydevagent.ps1");
-    const task = new vscode.Task({ type: "mydevagent" }, vscode.TaskScope.Global, "Installa MyDevAgent", "MyDevAgent",
+    const script = path.join(this.context.extensionPath, "setup", "install-mydevagent.ps1");
+    const task = new vscode.Task({ type: "mydevagent" }, vscode.TaskScope.Global, "Install MyDevAgent", "MyDevAgent",
       new vscode.ProcessExecution("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script]));
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: true };
     const execution = await vscode.tasks.executeTask(task);
-    this.setup("info", "Installo MyDevAgent…", "Segui l'avanzamento nel terminale qui sotto: quando finisce mi collego da sola.",
-      [], "Installo il mio cervello…");
+    this.setup("info", "Installing MyDevAgent…", "Follow the progress in the terminal below: when it finishes I'll connect by myself.",
+      [], "Installing my brain…");
     const code = await new Promise<number | undefined>((resolve) => {
       const sub = vscode.tasks.onDidEndTaskProcess((e) => {
         if (e.execution === execution) {
@@ -441,11 +441,11 @@ ${script("chat.js")}
       });
     });
     if (code === 0) return this.connect();
-    this.setup("error", "L'installazione non è riuscita", "Nel terminale qui sotto c'è il motivo. Sistemato quello, riprova.",
-      [{ id: "install", label: "Riprova", primary: true }, { id: "choose-folder", label: "Scegli la cartella" }]);
+    this.setup("error", "The installation failed", "The terminal below shows why. Once that is fixed, try again.",
+      [{ id: "install", label: "Try again", primary: true }, { id: "choose-folder", label: "Choose the folder" }]);
   }
 
-  // ------------------------------------------------------------- dal ponte
+  // ---------------------------------------------------------- from the bridge
   private onNotify(method: string, params: any): void {
     if (method === "event") this.post({ type: "event", event: params.event });
     else if (method === "chunk") this.post({ type: "chunk", text: params.text });
@@ -463,7 +463,7 @@ ${script("chat.js")}
     void vscode.commands.executeCommand("setContext", "mydevagent.pendingApproval", true);
     if (!this.view?.visible) this.reveal();
     this.post({ type: "approval", approval });
-    if (approval.after !== null && approval.after !== undefined && config().get("diffAutomatico", true)) {
+    if (approval.after !== null && approval.after !== undefined && config().get("autoDiff", true)) {
       await this.openProposal(approval.request, true);
     }
   }
@@ -476,8 +476,8 @@ ${script("chat.js")}
     if (end.files?.length) void this.refreshFiles();
   }
 
-  // ------------------------------------------------- modifiche proposte
-  private proposalUri(approval: Approval, side: "prima" | "dopo"): vscode.Uri {
+  // ------------------------------------------------------ proposed changes
+  private proposalUri(approval: Approval, side: "before" | "after"): vscode.Uri {
     const file = (approval.path || "file").replace(/\\/g, "/");
     return vscode.Uri.from({ scheme: SCHEME, path: "/" + file.replace(/^\/+/, ""), query: `${approval.request}-${side}` });
   }
@@ -486,22 +486,22 @@ ${script("chat.js")}
     return this.proposals.get(uri.toString()) ?? "";
   }
 
-  /** Apre il confronto prima/dopo: i pulsanti ✓ e ✗ in alto a destra applicano o rifiutano. */
+  /** Opens the before/after comparison: the ✓ and ✗ buttons at the top right apply or reject. */
   async openProposal(request: string, preserveFocus: boolean): Promise<void> {
     const approval = this.approvals.get(request);
     if (!approval || approval.after === null || approval.after === undefined) return;
-    const before = this.proposalUri(approval, "prima");
-    const after = this.proposalUri(approval, "dopo");
+    const before = this.proposalUri(approval, "before");
+    const after = this.proposalUri(approval, "after");
     this.proposals.set(before.toString(), approval.before ?? "");
     this.proposals.set(after.toString(), approval.after);
     const name = path.basename(approval.path || "file");
-    const title = approval.before === null ? `${name} (file nuovo proposto da Vio)` : `${name} (modifica proposta da Vio)`;
+    const title = approval.before === null ? `${name} (new file proposed by Vio)` : `${name} (change proposed by Vio)`;
     await vscode.commands.executeCommand("vscode.diff", before, after, title, { preview: true, preserveFocus });
   }
 
-  /** Il ✓/✗ nella barra del diff (o dal riquadro comandi): vale per la proposta aperta o per l'ultima. */
+  /** The ✓/✗ in the diff toolbar (or from the Command Palette): applies to the open proposal or to the latest one. */
   requestFor(uri?: vscode.Uri): string | undefined {
-    if (uri?.scheme === SCHEME) return uri.query.replace(/-(prima|dopo)$/, "");
+    if (uri?.scheme === SCHEME) return uri.query.replace(/-(before|after)$/, "");
     return [...this.approvals.keys()].pop();
   }
 
@@ -528,7 +528,7 @@ ${script("chat.js")}
     return (rel && !rel.startsWith("..") && !path.isAbsolute(rel) ? rel : file).replace(/\\/g, "/");
   }
 
-  /** Il file aperto e la selezione: Vio li vede senza doverli citare. */
+  /** The open file and the selection: Vio sees them without you having to mention them. */
   private editorContext(withText: boolean): Record<string, unknown> {
     const editor = vscode.window.activeTextEditor;
     if (!editor || editor.document.uri.scheme !== "file") return {};
@@ -555,13 +555,13 @@ ${script("chat.js")}
 
   private async openFile(file: string): Promise<void> {
     const full = path.isAbsolute(file) || !this.root ? file : path.join(this.root, file);
-    if (!fs.existsSync(full)) return this.post({ type: "notice", text: `Non trovo ${file}` });
+    if (!fs.existsSync(full)) return this.post({ type: "notice", text: `Cannot find ${file}` });
     await vscode.window.showTextDocument(vscode.Uri.file(full), { preview: true });
   }
 
   private async insert(text: string): Promise<void> {
     const editor = vscode.window.activeTextEditor ?? vscode.window.visibleTextEditors[0];
-    if (!editor) return this.post({ type: "notice", text: "Apri un file per inserire il codice." });
+    if (!editor) return this.post({ type: "notice", text: "Open a file to insert the code." });
     await editor.edit((edit) => editor.selections.forEach((sel) => edit.replace(sel, text)));
     await vscode.window.showTextDocument(editor.document, editor.viewColumn);
   }

@@ -1,8 +1,8 @@
 {
   "name": "mydevagent",
   "displayName": "MyDevAgent",
-  "description": "Vio, il tuo agente di programmazione locale: chat, modifiche con conferma, Ctrl+I e Tab. Funziona con Ollama, senza cloud.",
-  "version": "0.1.2",
+  "description": "Vio, your local coding agent: chat, changes you confirm, Ctrl+I and Tab. Runs on Ollama, no cloud.",
+  "version": "0.2.0",
   "publisher": "mydevagent",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -23,13 +23,13 @@
     "agent",
     "ollama",
     "local",
-    "italiano"
+    "english"
   ],
   "main": "./out/extension.js",
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Nelle cartelle non fidate Vio non legge, non modifica e non lancia niente: te lo dice e ti fa scegliere."
+      "description": "In untrusted folders Vio does not read, edit or run anything: it tells you and lets you choose."
     }
   },
   "activationEvents": [
@@ -57,74 +57,74 @@
     "commands": [
       {
         "command": "mydevagent.focus",
-        "title": "Apri la chat di Vio",
+        "title": "Open Vio's chat",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.inlineEdit",
-        "title": "Modifica con Vio",
+        "title": "Edit with Vio",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.acceptInline",
-        "title": "Tieni la modifica di Vio",
+        "title": "Keep Vio's edit",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.rejectInline",
-        "title": "Annulla la modifica di Vio",
+        "title": "Discard Vio's edit",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.approve",
-        "title": "Applica la modifica",
+        "title": "Apply the change",
         "category": "MyDevAgent",
         "icon": "$(check)"
       },
       {
         "command": "mydevagent.reject",
-        "title": "Rifiuta la modifica",
+        "title": "Reject the change",
         "category": "MyDevAgent",
         "icon": "$(close)"
       },
       {
         "command": "mydevagent.stop",
-        "title": "Ferma Vio",
+        "title": "Stop Vio",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.undo",
-        "title": "Annulla le ultime modifiche di Vio",
+        "title": "Undo Vio's last changes",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.stats",
-        "title": "Statistiche",
+        "title": "Statistics",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.newChat",
-        "title": "Nuova chat",
+        "title": "New chat",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.toggleTab",
-        "title": "Attiva/disattiva il completamento con Tab",
+        "title": "Toggle Tab completion",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.restart",
-        "title": "Riavvia MyDevAgent",
+        "title": "Restart MyDevAgent",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.install",
-        "title": "Installa MyDevAgent (Python, Ollama e modelli)",
+        "title": "Install MyDevAgent (Python, Ollama and models)",
         "category": "MyDevAgent"
       },
       {
         "command": "mydevagent.showLog",
-        "title": "Mostra il registro",
+        "title": "Show the log",
         "category": "MyDevAgent"
       }
     ],
@@ -132,12 +132,12 @@
       "editor/title": [
         {
           "command": "mydevagent.approve",
-          "when": "resourceScheme == mydevagent-proposta",
+          "when": "resourceScheme == mydevagent-proposal",
           "group": "navigation@1"
         },
         {
           "command": "mydevagent.reject",
-          "when": "resourceScheme == mydevagent-proposta",
+          "when": "resourceScheme == mydevagent-proposal",
           "group": "navigation@2"
         }
       ],
@@ -200,13 +200,13 @@
     "configuration": {
       "title": "MyDevAgent",
       "properties": {
-        "mydevagent.percorso": {
+        "mydevagent.path": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Cartella dove è installato MyDevAgent (quella con `.venv`). Vuota: la cerco da sola.",
+          "markdownDescription": "Folder where MyDevAgent is installed (the one with `.venv`). Empty: Vio looks for it by itself.",
           "scope": "machine"
         },
-        "mydevagent.profilo": {
+        "mydevagent.profile": {
           "type": "string",
           "enum": [
             "",
@@ -216,16 +216,16 @@
             "gpu24"
           ],
           "enumDescriptions": [
-            "Quello del file .env di MyDevAgent",
-            "Solo processore",
-            "Scheda video da 8 GB",
-            "Scheda video da 16 GB",
-            "Scheda video da 24 GB"
+            "The one in MyDevAgent's .env file",
+            "CPU only",
+            "8 GB graphics card",
+            "16 GB graphics card",
+            "24 GB graphics card"
           ],
           "default": "",
-          "description": "Profilo dei modelli (dipende dalla scheda video)."
+          "description": "Model profile (depends on your graphics card)."
         },
-        "mydevagent.permessi": {
+        "mydevagent.permissions": {
           "type": "string",
           "enum": [
             "ask",
@@ -234,13 +234,13 @@
             "auto"
           ],
           "enumDescriptions": [
-            "Chiede conferma prima di ogni modifica e comando",
-            "Modifica i file da sola, chiede per i comandi",
-            "Legge e propone un piano, non modifica niente",
-            "Fa tutto da sola dentro la cartella del progetto"
+            "Asks for confirmation before every change and command",
+            "Edits files by itself, asks before commands",
+            "Reads and proposes a plan, changes nothing",
+            "Does everything by itself inside the project folder"
           ],
           "default": "ask",
-          "description": "Cosa può fare Vio senza chiederti il permesso."
+          "description": "What Vio can do without asking your permission."
         },
         "mydevagent.team": {
           "type": "string",
@@ -252,34 +252,34 @@
             "ultra-deep"
           ],
           "default": "auto",
-          "description": "Quanti agenti lavorano a ogni richiesta (auto: sceglie Vio)."
+          "description": "How many agents work on each request (auto: Vio chooses)."
         },
-        "mydevagent.tab.attivo": {
+        "mydevagent.tab.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Suggerisce il codice mentre scrivi: premi Tab per accettarlo."
+          "description": "Suggests code while you type: press Tab to accept it."
         },
-        "mydevagent.tab.modello": {
+        "mydevagent.tab.model": {
           "type": "string",
           "default": "",
-          "markdownDescription": "Modello per Tab (vuoto: il modello veloce del profilo). Consigliato: `qwen2.5-coder:1.5b-base`."
+          "markdownDescription": "Model for Tab (empty: the profile's fast model). Recommended: `qwen2.5-coder:1.5b-base`."
         },
-        "mydevagent.tab.attesa": {
+        "mydevagent.tab.delay": {
           "type": "number",
           "default": 250,
           "minimum": 50,
           "maximum": 2000,
-          "description": "Millisecondi di pausa nella scrittura prima di chiedere un suggerimento."
+          "description": "Milliseconds of pause in typing before asking for a suggestion."
         },
-        "mydevagent.diffAutomatico": {
+        "mydevagent.autoDiff": {
           "type": "boolean",
           "default": true,
-          "description": "Quando Vio vuole modificare un file, apre subito il confronto prima/dopo nell'editor."
+          "description": "When Vio wants to change a file, open the before/after comparison in the editor right away."
         },
-        "mydevagent.salvaPrimaDiInviare": {
+        "mydevagent.saveBeforeSend": {
           "type": "boolean",
           "default": true,
-          "description": "Salva i file aperti prima di mandare una richiesta, così Vio vede l'ultima versione."
+          "description": "Save open files before sending a request, so Vio sees the latest version."
         }
       }
     },

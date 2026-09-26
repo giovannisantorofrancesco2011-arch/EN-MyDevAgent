@@ -266,88 +266,88 @@
   },
   "tokenColors": [
     {
-      "name": "Commenti",
+      "name": "Comments",
       "scope": ["comment", "punctuation.definition.comment", "string.quoted.docstring"],
       "settings": { "foreground": "#6e6590", "fontStyle": "italic" }
     },
     {
-      "name": "Parole chiave",
+      "name": "Keywords",
       "scope": ["keyword", "storage.type", "storage.modifier", "keyword.control", "keyword.operator.new",
         "keyword.operator.expression", "keyword.operator.logical.python", "variable.language.this", "variable.language.self",
         "variable.parameter.function.language.special.self.python"],
       "settings": { "foreground": "#c084fc" }
     },
     {
-      "name": "Operatori",
+      "name": "Operators",
       "scope": ["keyword.operator", "punctuation.accessor", "punctuation.separator.key-value"],
       "settings": { "foreground": "#a78bfa" }
     },
     {
-      "name": "Punteggiatura",
+      "name": "Punctuation",
       "scope": ["punctuation", "meta.brace", "punctuation.definition.tag"],
       "settings": { "foreground": "#9d8fc4" }
     },
     {
-      "name": "Funzioni",
+      "name": "Functions",
       "scope": ["entity.name.function", "support.function", "meta.function-call.generic", "variable.function",
         "entity.name.method"],
       "settings": { "foreground": "#f0abfc" }
     },
     {
-      "name": "Tipi e classi",
+      "name": "Types and classes",
       "scope": ["entity.name.type", "entity.name.class", "support.class", "support.type", "entity.other.inherited-class",
         "storage.type.primitive", "entity.name.namespace"],
       "settings": { "foreground": "#f9a8d4" }
     },
     {
-      "name": "Stringhe",
+      "name": "Strings",
       "scope": ["string", "string.quoted", "string.template", "markup.inline.raw"],
       "settings": { "foreground": "#a7f3d0" }
     },
     {
-      "name": "Caratteri speciali nelle stringhe",
+      "name": "Special characters in strings",
       "scope": ["constant.character.escape", "string.regexp", "constant.other.placeholder",
         "punctuation.definition.template-expression"],
       "settings": { "foreground": "#67e8f9" }
     },
     {
-      "name": "Numeri e costanti",
+      "name": "Numbers and constants",
       "scope": ["constant.numeric", "constant.language", "constant.other", "support.constant", "variable.other.constant"],
       "settings": { "foreground": "#fcd34d" }
     },
     {
-      "name": "Variabili",
+      "name": "Variables",
       "scope": ["variable", "variable.other", "meta.definition.variable"],
       "settings": { "foreground": "#e7e1f5" }
     },
     {
-      "name": "Parametri",
+      "name": "Parameters",
       "scope": ["variable.parameter", "meta.function.parameters variable"],
       "settings": { "foreground": "#fbcfe8", "fontStyle": "italic" }
     },
     {
-      "name": "Proprietà",
+      "name": "Properties",
       "scope": ["variable.other.property", "variable.other.object.property", "support.variable.property",
         "meta.object-literal.key", "entity.name.tag.yaml", "support.type.property-name"],
       "settings": { "foreground": "#d8b4fe" }
     },
     {
-      "name": "Decoratori",
+      "name": "Decorators",
       "scope": ["entity.name.function.decorator", "meta.decorator", "punctuation.definition.decorator"],
       "settings": { "foreground": "#fdba74" }
     },
     {
-      "name": "Tag HTML",
+      "name": "HTML tags",
       "scope": ["entity.name.tag", "meta.tag.sgml"],
       "settings": { "foreground": "#f472b6" }
     },
     {
-      "name": "Attributi HTML e CSS",
+      "name": "HTML and CSS attributes",
       "scope": ["entity.other.attribute-name", "support.type.property-name.css"],
       "settings": { "foreground": "#fcd34d" }
     },
     {
-      "name": "Selettori CSS",
+      "name": "CSS selectors",
       "scope": ["entity.other.attribute-name.class.css", "entity.other.attribute-name.id.css", "entity.name.tag.css"],
       "settings": { "foreground": "#f0abfc" }
     },
@@ -357,7 +357,7 @@
       "settings": { "foreground": "#c084fc", "fontStyle": "italic" }
     },
     {
-      "name": "Titoli Markdown",
+      "name": "Markdown headings",
       "scope": ["markup.heading", "entity.name.section"],
       "settings": { "foreground": "#c084fc", "fontStyle": "bold" }
     },

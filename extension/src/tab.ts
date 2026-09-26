@@ -1,4 +1,4 @@
-// Tab: mentre scrivi, Vio suggerisce il seguito in grigio (fill-in-the-middle con il modello veloce).
+// Tab: while you type, Vio suggests what comes next in grey (fill-in-the-middle with the fast model).
 import * as vscode from "vscode";
 import { type Chat, SCHEME } from "./chat";
 
@@ -15,22 +15,22 @@ export class Tab implements vscode.InlineCompletionItemProvider {
   async provideInlineCompletionItems(doc: vscode.TextDocument, pos: vscode.Position, context: vscode.InlineCompletionContext,
                                      token: vscode.CancellationToken): Promise<vscode.InlineCompletionItem[] | undefined> {
     const config = vscode.workspace.getConfiguration("mydevagent");
-    if (!config.get("tab.attivo", true) || !this.chat.state.connected || doc.uri.scheme === SCHEME) return;
+    if (!config.get("tab.enabled", true) || !this.chat.state.connected || doc.uri.scheme === SCHEME) return;
     const line = doc.lineAt(pos.line).text;
     const head = line.slice(0, pos.character);
     const rest = line.slice(pos.character);
-    if (/^\w/.test(rest)) return; // in mezzo a una parola
+    if (/^\w/.test(rest)) return; // in the middle of a word
     const item = (text: string) => [new vscode.InlineCompletionItem(text, new vscode.Range(pos, pos))];
 
-    // stai scrivendo proprio quello che ti avevo suggerito: il resto è già pronto
+    // you are typing exactly what I suggested: the rest is already there
     const last = this.last;
     if (last && last.uri === doc.uri.toString() && last.line === pos.line && head.startsWith(last.head)) {
       const typed = head.slice(last.head.length);
       if (last.text.startsWith(typed) && last.text.length > typed.length) return item(last.text.slice(typed.length));
     }
 
-    if (context.triggerKind === vscode.InlineCompletionTriggerKind.Automatic) await sleep(config.get("tab.attesa", 250));
-    // uno alla volta: Ollama le fa comunque in fila, e quelle vecchie non servono più
+    if (context.triggerKind === vscode.InlineCompletionTriggerKind.Automatic) await sleep(config.get("tab.delay", 250));
+    // one at a time: Ollama queues them anyway, and the old ones are no longer needed
     while (this.inflight) {
       await this.inflight.catch(() => undefined);
       if (token.isCancellationRequested) return;
@@ -42,7 +42,7 @@ export class Tab implements vscode.InlineCompletionItemProvider {
     const suffix = doc.getText(new vscode.Range(pos, doc.positionAt(offset + MAX_SUFFIX)));
     const multiline = !rest.trim() && (!head.trim() || /[:{([]\s*$/.test(head));
     const request = this.chat.bridge.request<{ text: string }>("complete", {
-      prefix, suffix, model: config.get("tab.modello", "") || undefined, max_tokens: multiline ? 128 : 48, multiline });
+      prefix, suffix, model: config.get("tab.model", "") || undefined, max_tokens: multiline ? 128 : 48, multiline });
     this.inflight = request;
     let text = "";
     try {
