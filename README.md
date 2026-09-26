@@ -1,6 +1,6 @@
 # MyDevAgent
 
-> This is the **English edition** of MyDevAgent (branch `EN`). The Italian edition lives on branch
+> This is the **English edition** of MyDevAgent (branch `EN-MyDevAgent`). The Italian edition lives on branch
 > [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/tree/MyDevAgent).
 
 **Local-first coding assistant with 35 specialized agents** (15 in the core + 20 for
@@ -87,12 +87,12 @@ Roles, prompts, tools, flow and interactions: **[docs/AGENTS.md](docs/AGENTS.md)
 
 ### Automatic
 ```bash
-git clone -b EN https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent mydevagent && cd mydevagent
+git clone -b EN-MyDevAgent https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent mydevagent && cd mydevagent
 ./scripts/install.sh               # picks the profile based on your GPU; or: ./scripts/install.sh gpu8
 ./run.sh                           # starts MyDevAgent, without activating the virtual environment
 ```
 On Windows: `powershell -ExecutionPolicy Bypass -File scripts\install.ps1`, then `run.bat`.
-No git? Download the [zip](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/archive/refs/heads/EN.zip).
+No git? Download the [zip](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent/archive/refs/heads/EN-MyDevAgent.zip).
 
 To use it on one of your projects, launch `run.sh` (or `run.bat`) from the project folder:
 `cd ~/code/my-project && ~/mydevagent/run.sh`. If MyDevAgent isn't installed yet, `run.sh` installs it.
@@ -103,7 +103,7 @@ To use it on one of your projects, launch `run.sh` (or `run.bat`) from the proje
 ollama pull qwen2.5-coder:7b && ollama pull qwen2.5-coder:1.5b && ollama pull nomic-embed-text
 
 # 2. MyDevAgent (Python 3.10+)
-git clone -b EN https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent mydevagent && cd mydevagent
+git clone -b EN-MyDevAgent https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent mydevagent && cd mydevagent
 python3 -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -e ".[server,search]"
 cp .env.example .env                                      # profile, search keys (optional)
@@ -148,9 +148,9 @@ are kept):
 ```
 cd <MyDevAgent folder>
 git init
-git remote add origin https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent.git
-git fetch origin EN
-git checkout -f -B EN origin/EN
+git remote add origin https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent.git
+git fetch origin EN-MyDevAgent
+git checkout -f -B EN-MyDevAgent origin/EN-MyDevAgent
 ```
 
 ## Usage
@@ -218,8 +218,8 @@ Any OpenAI-compatible server works: just set `LLM_BASE_URL` and the model names 
 
 ## IDE integration
 - **MyDevAgent Studio** (Windows): the VSCodium-based editor with Vio built in, chat, edit confirmation,
-  Ctrl+I and Tab. [Download the installer](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/releases/latest/download/MyDevAgent-Studio-Setup.exe),
-  sources on the [MyDevAgent-Studio](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/tree/MyDevAgent-Studio) branch
+  Ctrl+I and Tab. [Download the installer](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent/releases/download/studio-en/MyDevAgent-Studio-Setup-EN.exe),
+  sources on the [EN-MyDevAgent-Studio](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent/tree/EN-MyDevAgent-Studio) branch
   (uses `mydevagent bridge`, see `mydevagent/bridge.py`)
 - **VS Code + Continue.dev** (multi-agent chat, inline edit, autocomplete, @codebase):
   [integrations/vscode.md](integrations/vscode.md) + [integrations/continue/config.yaml](integrations/continue/config.yaml)
