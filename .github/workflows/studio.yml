@@ -5,7 +5,7 @@ name: MyDevAgent Studio (English)
 
 on:
   push:
-    branches: [EN-Studio]
+    branches: [EN-MyDevAgent-Studio]
   workflow_dispatch:
 
 permissions:

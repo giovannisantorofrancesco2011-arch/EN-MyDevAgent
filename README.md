@@ -1,14 +1,14 @@
 # MyDevAgent Studio
 
 The code editor with **Vio** as its main agent. It is based on [VSCodium](https://vscodium.com) (VS Code without
-telemetry) and uses [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent): everything runs on
+telemetry) and uses [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent): everything runs on
 your computer with Ollama, no cloud and no subscriptions.
 
-> This is the **English edition** (branch `EN-Studio`). The Italian edition lives on branch
+> This is the **English edition** (branch `EN-MyDevAgent-Studio`). The Italian edition lives on branch
 > [`MyDevAgent-Studio`](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/tree/MyDevAgent-Studio).
 > The two can be installed side by side.
 
-**[⬇ Download MyDevAgent-Studio-Setup-EN.exe](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/releases/download/studio-en/MyDevAgent-Studio-Setup-EN.exe)** (Windows 10/11, 64-bit)
+**[⬇ Download MyDevAgent-Studio-Setup-EN.exe](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent/releases/download/studio-en/MyDevAgent-Studio-Setup-EN.exe)** (Windows 10/11, 64-bit)
 
 ![Vio proposes a change: before/after comparison and confirmation](docs/conferma.png)
 
@@ -28,7 +28,7 @@ your computer with Ollama, no cloud and no subscriptions.
 If something is missing (Ollama not running, a model not downloaded, MyDevAgent not found) Vio says so in the chat
 and gives you a button to fix it.
 
-The installer sets up the English edition of MyDevAgent (branch `EN`).
+The installer sets up the English edition of MyDevAgent (branch `EN-MyDevAgent`).
 
 ## What it can do
 

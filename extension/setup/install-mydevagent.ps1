@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"  # Invoke-WebRequest is much faster without the progress bar
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$Repo = "https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent"
+$Repo = "https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent"
 
 function Step($text) { Write-Host "`n==> $text" -ForegroundColor Magenta }
 function Ok($text) { Write-Host "    $text" -ForegroundColor Green }
@@ -103,13 +103,13 @@ try {
       if (Test-Path $installDir) { throw "The folder $installDir already exists but does not contain MyDevAgent: move it or choose another one." }
       if (Get-Command git -ErrorAction SilentlyContinue) {
         Write-Host "    Downloading MyDevAgent (English edition) with git into $installDir..."
-        git clone --depth 1 -b EN "$Repo.git" $installDir
+        git clone --depth 1 -b EN-MyDevAgent "$Repo.git" $installDir
         if ($LASTEXITCODE -ne 0) { throw "git clone failed" }
       } else {
         Write-Host "    Downloading MyDevAgent (English edition) into $installDir..."
         $zip = Join-Path $env:TEMP "mydevagent.zip"
         $tmp = Join-Path $env:TEMP "mydevagent-zip"
-        Invoke-WebRequest "$Repo/archive/refs/heads/EN.zip" -OutFile $zip -UseBasicParsing
+        Invoke-WebRequest "$Repo/archive/refs/heads/EN-MyDevAgent.zip" -OutFile $zip -UseBasicParsing
         Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
         Expand-Archive $zip $tmp
         Move-Item (Get-ChildItem $tmp -Directory | Select-Object -First 1).FullName $installDir

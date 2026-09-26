@@ -1,6 +1,6 @@
 # MyDevAgent for VS Code
 
-**Vio**, the coding agent of [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent),
+**Vio**, the coding agent of [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent),
 inside your editor. Everything runs on your computer with Ollama: no cloud, no subscriptions.
 
 - **Chat** in the sidebar (Ctrl+L): Vio reads the project, edits files and runs the tests. It sees the open file
