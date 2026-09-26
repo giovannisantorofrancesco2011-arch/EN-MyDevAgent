@@ -1,4 +1,4 @@
-"""Tool dell'agente: leggere, cercare, modificare, eseguire. Ogni azione passa da permessi e checkpoint."""
+"""Agent tools: read, search, edit, run. Every action goes through permissions and checkpoints."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ from .checkpoints import CheckpointStore
 from .permissions import EDIT_TOOLS, ApprovalRequest, Approver, PermissionPolicy, is_dangerous
 
 MAX_RESULT_CHARS = 8000
-WEB_PAGE_CHARS = 6000  # un pezzo di pagina web: sotto MAX_RESULT_CHARS, così non viene tagliato a metà
+WEB_PAGE_CHARS = 6000  # one chunk of a web page: below MAX_RESULT_CHARS, so it is not cut in half
 DEFAULT_READ_LINES = 250
 EventHandler = Callable[[dict[str, Any]], None]
 Spawn = Callable[["SubAgent", str], "tuple[str, AgentTools]"]
@@ -143,7 +143,7 @@ class AgentTools:
                  subagents: dict[str, SubAgent] | None = None, spawn: Spawn | None = None,
                  allowed: set[str] | None = None, extra_dirs: list[Path] | None = None) -> None:
         self.root = Path(root).resolve()
-        self.extra_dirs = [Path(d).resolve() for d in extra_dirs or []]  # cartelle in più (/add-dir)
+        self.extra_dirs = [Path(d).resolve() for d in extra_dirs or []]  # extra folders (/add-dir)
         self.workspace = Workspace(self.root, allow_write=True, extra=self.extra_dirs)
         self.policy = policy
         self.checkpoints = checkpoints
@@ -151,21 +151,21 @@ class AgentTools:
         self.emit = emit or (lambda _e: None)
         self.web_search_fn = web_search
         self.web_fetch_fn = web_fetch
-        self.preview_fn = preview  # anteprima dei siti: c'è solo se sul PC c'è Chrome, Edge o Chromium
+        self.preview_fn = preview  # site preview: only available if Chrome, Edge or Chromium is installed
         self.memory = memory
         self.bash_timeout = bash_timeout
         self.skills = skills or {}
         self.hooks = hooks
         self.mcp = mcp
         self.subagents = subagents or {}
-        self.spawn = spawn  # esegue un sotto-agente: lo fornisce il runner, che ha il modello
-        self.allowed = allowed  # None = tutti i tool (i sotto-agenti possono averne meno)
+        self.spawn = spawn  # runs a subagent: provided by the runner, which owns the model
+        self.allowed = allowed  # None = all tools (subagents may have fewer)
         self.todos: list[dict[str, str]] = []
-        self._page = ("", "")  # (url, testo) dell'ultima pagina letta con web_fetch
+        self._page = ("", "")  # (url, text) of the last page read with web_fetch
         self.changed: list[str] = []
         self.read_paths: set[str] = set()
-        self.last_test: tuple[str, bool, str] | None = None  # (comando, ok, output)
-        self.user_denied = False  # l'utente ha rifiutato qualcosa in questo turno
+        self.last_test: tuple[str, bool, str] | None = None  # (command, ok, output)
+        self.user_denied = False  # the user denied something this turn
         self._lock = threading.Lock()
 
     # ----------------------------------------------------------------- spec
@@ -198,9 +198,9 @@ class AgentTools:
                 result = f"ERROR: bad arguments for {name}: {exc}"
             except (WorkspaceError, FileNotFoundError, IsADirectoryError, UnicodeDecodeError) as exc:
                 result = f"ERROR: {type(exc).__name__}: {exc}"
-            except Cancelled:  # Esc durante un sotto-agente: ferma anche l'agente principale
+            except Cancelled:  # Esc during a subagent: stop the main agent too
                 raise
-            except Exception as exc:  # un tool non deve mai far cadere il ciclo
+            except Exception as exc:  # a tool must never crash the loop
                 result = f"ERROR: {name} failed: {type(exc).__name__}: {exc}"
             _, feedback = self._hook("PostToolUse", name, args, result)
             if feedback:
@@ -211,10 +211,10 @@ class AgentTools:
         return truncate_middle(result)
 
     def _hook(self, event: str, name: str, args: dict[str, Any], result: str | None = None) -> tuple[bool, str]:
-        """Esegue gli hook del tool: (bloccato?, messaggio per il modello)."""
+        """Runs the tool's hooks: (blocked?, message for the model)."""
         if not self.hooks:
             return False, ""
-        if name == "mcp" and args.get("tool"):  # per gli hook è mcp__server__tool, come in Claude Code
+        if name == "mcp" and args.get("tool"):  # for hooks it is mcp__server__tool, as in Claude Code
             name, args = f"mcp__{args.get('server')}__{args['tool']}", dict(args.get("arguments") or {})
         payload = self.hooks.tool_payload(name, args)
         if result is not None:
@@ -223,14 +223,14 @@ class AgentTools:
         for note in outcome.notes:
             self.emit({"type": "info", "text": note})
         if outcome.blocked:
-            self.emit({"type": "info", "text": f"un hook ha {'bloccato' if event == 'PreToolUse' else 'segnalato'} "
+            self.emit({"type": "info", "text": f"a hook {'blocked' if event == 'PreToolUse' else 'flagged'} "
                                                f"{name}: {outcome.reason[:120]}"})
         return outcome.blocked, (outcome.reason if outcome.blocked else outcome.context)
 
-    # ------------------------------------------------------------- permessi
+    # ---------------------------------------------------------- permissions
     def _authorize(self, tool: str, args: dict[str, Any], summary: str, diff: str = "",
                    before: str | None = None, after: str | None = None) -> str | None:
-        """None = consentito; altrimenti il messaggio da restituire al modello."""
+        """None = allowed; otherwise the message to return to the model."""
         decision = self.policy.decide(tool, args)
         if decision.action == "allow":
             return None
@@ -306,7 +306,7 @@ class AgentTools:
         spec = srv.tool(tool)
         if spec is None:
             return f"ERROR: '{server}' has no tool '{tool}'.\n{self.mcp.list_tools(srv)}"
-        if isinstance(arguments, str):  # i modelli piccoli a volte mandano il JSON come stringa
+        if isinstance(arguments, str):  # small models sometimes send the JSON as a string
             try:
                 arguments = json.loads(arguments)
             except ValueError:
@@ -321,14 +321,14 @@ class AgentTools:
         return srv.call(tool, arguments)
 
     def _t_task(self, agent: str = "", prompt: str = "", subagent_type: str = "", description: str = "") -> str:
-        name = (agent or subagent_type).strip().lower()  # subagent_type: il nome del campo in Claude Code
+        name = (agent or subagent_type).strip().lower()  # subagent_type: the field name in Claude Code
         sub = self.subagents.get(name)
         if sub is None or not self.spawn:
             return f"ERROR: unknown sub-agent '{name}'. Available: {', '.join(self.subagents) or 'none'}"
         if not prompt.strip():
             return "ERROR: give the sub-agent a complete `prompt`."
         report, child = self.spawn(sub, prompt)
-        for path in child.changed:  # le sue modifiche contano come nostre (footer, review, /undo)
+        for path in child.changed:  # its changes count as ours (footer, review, /undo)
             if path not in self.changed:
                 self.changed.append(path)
         self.last_test = child.last_test or self.last_test
@@ -342,7 +342,7 @@ class AgentTools:
         except re.error as exc:
             return f"ERROR: invalid regex: {exc}"
         found = []
-        for base in (self.root, *self.extra_dirs):  # anche nelle cartelle in più
+        for base in (self.root, *self.extra_dirs):  # in the extra folders too
             hits = Workspace(base).grep(pattern, glob, limit=80)
             if hits != "no matches":
                 prefix = "" if base == self.root else display_path(self.root, base) + "/"
@@ -407,7 +407,7 @@ class AgentTools:
         ok = result.startswith("exit code 0")
         self.last_test = (command, ok, result)
         self.emit({"type": "tests", "command": command, "ok": ok})
-        if ok and self.changed:  # aiuta i modelli piccoli a capire quando fermarsi
+        if ok and self.changed:  # helps small models understand when to stop
             result += ("\n\nAll tests pass. If the requested change is complete, STOP calling tools and give "
                        "your short final answer now.")
         return result
@@ -435,21 +435,21 @@ class AgentTools:
         return f"todo list updated ({done}/{len(self.todos)} completed)"
 
     def _t_web_fetch(self, url: str, offset: int = 0, prompt: str = "") -> str:
-        # `prompt` è il campo di WebFetch in Claude Code: qui la pagina arriva intera, a pezzi
+        # `prompt` is WebFetch's field in Claude Code: here the whole page arrives, in chunks
         if not self.web_fetch_fn:
             return "ERROR: web fetch not available (offline mode?)."
-        url = url.strip() if "://" in url else "https://" + url.strip()  # «docs.python.org/3» va bene
+        url = url.strip() if "://" in url else "https://" + url.strip()  # "docs.python.org/3" is fine
         host = (urlparse(url).hostname or "").lower()
-        if not re.fullmatch(r"[\w.-]+", host):  # niente «*»: il permesso «sempre» vale per quel sito
+        if not re.fullmatch(r"[\w.-]+", host):  # no "*": the "always" permission applies to that site
             return f"ERROR: not a valid web address: {url}"
         denied = self._authorize("web_fetch", {"url": url, "host": host}, f"Fetch({url})")
         if denied:
             return denied
         start = max(0, int(offset or 0))
-        if start == 0 or self._page[0] != url:  # i pezzi successivi dalla stessa copia della pagina
+        if start == 0 or self._page[0] != url:  # later chunks come from the same copy of the page
             self._page = (url, self.web_fetch_fn(url))
         text = self._page[1]
-        if text.startswith(("OFFLINE:", "ERROR:")):  # pagina non letta: niente «N characters»
+        if text.startswith(("OFFLINE:", "ERROR:")):  # page not read: no "N characters"
             self._page = ("", "")
             return text
         part = text[start:start + WEB_PAGE_CHARS]
@@ -467,11 +467,11 @@ class AgentTools:
         elif start:
             return "ERROR: with `start`, also give the `url` where the server answers (e.g. http://localhost:5173)."
         base = self.root
-        if path and not url:  # un file del progetto o di una cartella in più: si serve la sua cartella
+        if path and not url:  # a file of the project or of an extra folder: serve its folder
             target = self.workspace.resolve(path)
             base = next(b for b in (self.root, *self.extra_dirs) if target.is_relative_to(b))
             path = target.relative_to(base).as_posix()
-        if start:  # accendere un server è un comando come gli altri: stessi permessi di bash
+        if start:  # starting a server is a command like any other: same permissions as bash
             denied = self._authorize("bash", {"command": start}, f"Bash({start})")
             if denied:
                 return denied
@@ -484,7 +484,7 @@ class AgentTools:
 
 
 def apply_edit(text: str, old: str, new: str, replace_all: bool = False) -> tuple[str, str | None]:
-    """Sostituzione esatta, poi tollerante sugli spazi a fine riga, poi sull'indentazione."""
+    """Exact replacement, then lenient on trailing whitespace, then on indentation."""
     if not old:
         return text, "old_string is empty; use write_file to create a file."
     count = text.count(old)
@@ -493,7 +493,7 @@ def apply_edit(text: str, old: str, new: str, replace_all: bool = False) -> tupl
     if count > 1:
         return text, (f"old_string matches {count} places. Add surrounding lines to make it unique, "
                       "or set replace_all=true.")
-    # tolleranza: confronto riga per riga ignorando gli spazi finali e poi l'indentazione
+    # leniency: compare line by line ignoring trailing whitespace, then indentation
     lines = text.splitlines(keepends=True)
     old_lines = old.strip("\n").splitlines()
     for normalize in (str.rstrip, str.strip):
@@ -504,7 +504,7 @@ def apply_edit(text: str, old: str, new: str, replace_all: bool = False) -> tupl
             i = hits[0]
             original = "".join(lines[i:i + len(target)])
             replacement = new.strip("\n")
-            if normalize is str.strip:  # reindenta il nuovo testo come l'originale
+            if normalize is str.strip:  # reindent the new text like the original
                 replacement = _reindent(replacement, _indent(lines[i]), _indent(old_lines[0]))
             if original.endswith("\n") and not replacement.endswith("\n"):
                 replacement += "\n"

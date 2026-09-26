@@ -1,7 +1,7 @@
-"""Bot Discord con due comandi: !ciao e !dado.
+"""Discord bot with two commands: !hello and !dice.
 
-Il token del bot va nel file .env (copia .env.example): i passaggi sono in MYDEVAGENT.md.
-Avvio: python bot.py  (prima: python -m pip install -r requirements.txt)
+The bot token goes in the .env file (copy .env.example): the steps are in MYDEVAGENT.md.
+Run: python bot.py  (first: python -m pip install -r requirements.txt)
 """
 
 import os
@@ -13,29 +13,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 intents = discord.Intents.default()
-intents.message_content = True  # serve per leggere i comandi che iniziano con !
+intents.message_content = True  # needed to read commands that start with !
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 @bot.event
 async def on_ready() -> None:
-    print(f"Collegato come {bot.user}")
+    print(f"Logged in as {bot.user}")
 
 
 @bot.command()
-async def ciao(ctx: commands.Context) -> None:
-    """Saluta chi scrive il comando."""
-    await ctx.send(f"Ciao {ctx.author.display_name}! 👋")
+async def hello(ctx: commands.Context) -> None:
+    """Greets whoever types the command."""
+    await ctx.send(f"Hi {ctx.author.display_name}! 👋")
 
 
 @bot.command()
-async def dado(ctx: commands.Context, facce: int = 6) -> None:
-    """Tira un dado: !dado oppure !dado 20."""
-    await ctx.send(f"🎲 È uscito {random.randint(1, max(2, facce))}")
+async def dice(ctx: commands.Context, sides: int = 6) -> None:
+    """Rolls a die: !dice or !dice 20."""
+    await ctx.send(f"🎲 You rolled {random.randint(1, max(2, sides))}")
 
 
 if __name__ == "__main__":
     token = os.environ.get("DISCORD_TOKEN")
     if not token:
-        raise SystemExit("Manca DISCORD_TOKEN: copia .env.example in .env e incolla il token del bot")
+        raise SystemExit("DISCORD_TOKEN is missing: copy .env.example to .env and paste the bot token")
     bot.run(token)

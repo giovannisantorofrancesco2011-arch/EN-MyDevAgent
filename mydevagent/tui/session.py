@@ -1,4 +1,4 @@
-"""Sessioni salvate automaticamente (per /resume e `mydevagent --continue`) ed export in Markdown."""
+"""Automatically saved sessions (for /resume and `mydevagent --continue`) and Markdown export."""
 
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ class Session:
 
     @property
     def title(self) -> str:
-        first = next((m["content"] for m in self.history if m["role"] == "user"), "(vuota)")
+        first = next((m["content"] for m in self.history if m["role"] == "user"), "(empty)")
         return " ".join(first.split())[:60]
 
     def add_turn(self, user: str, assistant: str) -> None:
@@ -52,9 +52,9 @@ class Session:
         return cls(**json.loads(path.read_text(encoding="utf-8")))
 
     def to_markdown(self) -> str:
-        lines = [f"# MyDevAgent — sessione {self.id}", "", f"_cartella: {self.cwd}_", ""]
+        lines = [f"# MyDevAgent — session {self.id}", "", f"_folder: {self.cwd}_", ""]
         for msg in self.history:
-            who = "Tu" if msg["role"] == "user" else "MyDevAgent"
+            who = "You" if msg["role"] == "user" else "MyDevAgent"
             lines += [f"## {who}", "", msg["content"].strip(), ""]
         return "\n".join(lines)
 

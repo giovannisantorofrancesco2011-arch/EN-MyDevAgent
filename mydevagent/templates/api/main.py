@@ -1,12 +1,12 @@
-"""API di esempio con FastAPI: una lista di cose da fare, tenuta in memoria.
+"""Example API with FastAPI: a to-do list kept in memory.
 
-Avvio: python -m uvicorn main:app --reload   poi apri http://127.0.0.1:8000/docs
+Run: python -m uvicorn main:app --reload   then open http://127.0.0.1:8000/docs
 """
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI(title="La mia API")
+app = FastAPI(title="My API")
 
 
 class NewTodo(BaseModel):
@@ -23,7 +23,7 @@ todos: dict[int, Todo] = {}
 
 @app.get("/")
 def home() -> dict[str, str]:
-    return {"message": "Ciao! Apri /docs per provare l'API"}
+    return {"message": "Hi! Open /docs to try the API"}
 
 
 @app.get("/todos")
@@ -41,6 +41,6 @@ def add_todo(item: NewTodo) -> Todo:
 @app.post("/todos/{todo_id}/done")
 def complete_todo(todo_id: int) -> Todo:
     if todo_id not in todos:
-        raise HTTPException(status_code=404, detail="cosa da fare non trovata")
+        raise HTTPException(status_code=404, detail="to-do not found")
     todos[todo_id].done = True
     return todos[todo_id]

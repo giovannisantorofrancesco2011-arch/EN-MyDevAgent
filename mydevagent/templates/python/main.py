@@ -1,13 +1,13 @@
-"""Il tuo programma Python. Avvialo con: python main.py"""
+"""Your Python program. Run it with: python main.py"""
 
 
-def saluta(nome: str) -> str:
-    return f"Ciao, {nome}!"
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
 
 
 def main() -> None:
-    nome = input("Come ti chiami? ").strip() or "amico"
-    print(saluta(nome))
+    name = input("What's your name? ").strip() or "friend"
+    print(greet(name))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
-"""Controlli di salute: backend e modelli, download da Ollama, errori spiegati, hardware e profilo consigliato.
+"""Health checks: backends and models, downloads from Ollama, explained errors, hardware and recommended profile.
 
-Usato da `mydevagent doctor`, dalla UI (controllo all'avvio, /doctor, /pull) e dai messaggi d'errore di
-CLI e server: chi apre MyDevAgent per la prima volta non deve mai vedere un traceback.
+Used by `mydevagent doctor`, by the UI (startup check, /doctor, /pull) and by the error messages of the
+CLI and server: someone opening MyDevAgent for the first time must never see a traceback.
 """
 
 from __future__ import annotations
@@ -20,25 +20,25 @@ import httpx
 
 from .config import PROJECT_DIR, TIERS, Settings
 
-ESSENTIAL_TIERS = ("main", "fast", "reasoning")  # senza questi il team non risponde
-OPTIONAL_TIERS = ("embed", "vision")  # senza: ricerca lessicale al posto degli embedding, niente immagini
+ESSENTIAL_TIERS = ("main", "fast", "reasoning")  # without these the team can't answer
+OPTIONAL_TIERS = ("embed", "vision")  # without them: lexical search instead of embeddings, no images
 PROFILE_ORDER = ("cpu", "gpu8", "gpu16", "gpu24")
 SIZE_RE = re.compile(r":(\d+(?:\.\d+)?)b\b", re.IGNORECASE)
 
 
-# ------------------------------------------------------------------ backend e modelli
+# --------------------------------------------------------------- backends and models
 @dataclass
 class TierStatus:
     tier: str
     model: str
     base_url: str
-    installed: bool | None  # None = backend non raggiungibile
+    installed: bool | None  # None = backend not reachable
 
 
 @dataclass
 class Health:
-    reachable: dict[str, bool] = field(default_factory=dict)  # base_url → raggiungibile
-    installed: dict[str, set[str]] = field(default_factory=dict)  # base_url → modelli presenti
+    reachable: dict[str, bool] = field(default_factory=dict)  # base_url → reachable
+    installed: dict[str, set[str]] = field(default_factory=dict)  # base_url → models present
     tiers: list[TierStatus] = field(default_factory=list)
 
     @property
@@ -59,7 +59,7 @@ def is_installed(model: str, installed: set[str]) -> bool:
 
 
 def list_installed(base_url: str, api_key: str = "none", timeout: float = 2.0) -> set[str] | None:
-    """Modelli presenti sul backend (API OpenAI `GET /models`), None se non risponde."""
+    """Models present on the backend (OpenAI API `GET /models`), None if it does not respond."""
     try:
         resp = httpx.get(base_url.rstrip("/") + "/models", headers={"Authorization": f"Bearer {api_key}"},
                          timeout=timeout)
@@ -88,21 +88,21 @@ def is_ollama(base_url: str) -> bool:
 
 
 def ollama_host(base_url: str) -> str:
-    """http://localhost:11434/v1 → http://localhost:11434 (API nativa di Ollama)."""
+    """http://localhost:11434/v1 → http://localhost:11434 (Ollama's native API)."""
     return re.sub(r"/v1/?$", "", base_url.rstrip("/"))
 
 
 def start_hint(base_url: str) -> str:
     if is_ollama(base_url):
         if platform.system() in ("Windows", "Darwin"):
-            return "apri l'app Ollama (o esegui `ollama serve` in un altro terminale)"
-        return "esegui `ollama serve` in un altro terminale (o `systemctl start ollama`)"
+            return "open the Ollama app (or run `ollama serve` in another terminal)"
+        return "run `ollama serve` in another terminal (or `systemctl start ollama`)"
     if ":1234" in base_url:
-        return "apri LM Studio e avvia il server locale (scheda Developer → Start Server)"
-    return f"avvia il server del modello su {base_url}"
+        return "open LM Studio and start the local server (Developer tab → Start Server)"
+    return f"start the model server at {base_url}"
 
 
-# ---------------------------------------------------------------- sostituzioni
+# ---------------------------------------------------------------- substitutes
 def model_size(name: str) -> float:
     match = SIZE_RE.search(name)
     return float(match.group(1)) if match else 0.0
@@ -113,7 +113,7 @@ def _is_embed(name: str) -> bool:
 
 
 def suggest_substitute(tier: str, installed: set[str]) -> str | None:
-    """Il modello installato più adatto a un tier: coder prima, poi dimensione (piccolo per `fast`)."""
+    """The installed model best suited to a tier: coder models first, then size (small for `fast`)."""
     if tier == "embed":
         embeds = sorted(m for m in installed if _is_embed(m))
         return embeds[0] if embeds else None
@@ -133,7 +133,7 @@ def suggest_substitute(tier: str, installed: set[str]) -> str | None:
 
 
 def substitutes(health: Health) -> dict[str, str]:
-    """tier → modello installato da usare al posto di quello mancante."""
+    """tier → installed model to use instead of the missing one."""
     out = {}
     for status in health.missing():
         choice = suggest_substitute(status.tier, health.installed.get(status.base_url, set()))
@@ -143,7 +143,7 @@ def substitutes(health: Health) -> dict[str, str]:
 
 
 def apply_substitutes(settings: Settings, subs: dict[str, str]) -> None:
-    """Cambia i modelli del profilo attivo per questa sessione."""
+    """Changes the models of the active profile for this session."""
     profile = settings.active_profile
     for tier, model in subs.items():
         setattr(profile, tier, model)
@@ -154,7 +154,7 @@ def env_path() -> Path:
 
 
 def save_env(values: dict[str, str], path: Path | None = None) -> Path:
-    """Scrive/aggiorna chiavi nel .env di MyDevAgent (quello creato dall'installazione)."""
+    """Writes/updates keys in MyDevAgent's .env (the one created by the installer)."""
     path = path or env_path()
     lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
     pending = dict(values)
@@ -169,10 +169,10 @@ def save_env(values: dict[str, str], path: Path | None = None) -> Path:
     return path
 
 
-# -------------------------------------------------------------------- download
+# ------------------------------------------------------------------- downloads
 def pull_model(base_url: str, model: str, on_progress: Callable[[str, int, int], None] | None = None,
                client: httpx.Client | None = None) -> None:
-    """Scarica un modello con `POST /api/pull` di Ollama, chiamando on_progress(stato, completati, totale)."""
+    """Downloads a model with Ollama's `POST /api/pull`, calling on_progress(status, completed, total)."""
     client = client or httpx.Client(timeout=httpx.Timeout(10.0, read=None))
     with client.stream("POST", ollama_host(base_url) + "/api/pull", json={"model": model, "stream": True}) as resp:
         if resp.status_code >= 400:
@@ -195,9 +195,9 @@ def _pull_error(text: str) -> str:
         return text.strip()[:200]
 
 
-# ---------------------------------------------------------------------- errori
+# ---------------------------------------------------------------------- errors
 def explain_error(exc: BaseException, settings: Settings | None = None) -> tuple[str, str]:
-    """→ (titolo, suggerimento) in italiano per gli errori più comuni dei backend locali."""
+    """→ (title, hint) in plain English for the most common errors of local backends."""
     name = type(exc).__name__
     text = str(exc)
     low = text.lower()
@@ -209,23 +209,23 @@ def explain_error(exc: BaseException, settings: Settings | None = None) -> tuple
             url = ""
     model = _model_from_error(text)
     if (name == "NotFoundError" or "404" in text) and "model" in low and ("not found" in low or "pull" in low):
-        what = f"Il modello {model} non è installato" if model else "Il modello richiesto non è installato"
-        hint = (f"scaricalo con `/pull {model}` (o `ollama pull {model}`)" if model else "controlla con /models")
-        return what, hint + ", oppure usa un modello che hai già con `/model <nome>`"
+        what = f"The model {model} is not installed" if model else "The requested model is not installed"
+        hint = (f"download it with `/pull {model}` (or `ollama pull {model}`)" if model else "check with /models")
+        return what, hint + ", or use a model you already have with `/model <name>`"
     if name in ("APIConnectionError", "ConnectError", "ConnectionError", "ConnectionRefusedError") or \
             "connection refused" in low or "connection error" in low:
-        where = f" su {url}" if url else ""
-        return f"Non riesco a contattare il server dei modelli{where}", start_hint(url)
+        where = f" at {url}" if url else ""
+        return f"I can't reach the model server{where}", start_hint(url)
     if name in ("APITimeoutError", "ReadTimeout", "TimeoutException", "Timeout") or "timed out" in low:
-        return ("Il modello è troppo lento per questo PC",
-                "usa /fast per le richieste semplici o un profilo più leggero (`mydevagent -p cpu`); "
-                "`mydevagent bench` misura la velocità")
+        return ("The model is too slow for this PC",
+                "use /fast for simple requests or a lighter profile (`mydevagent -p cpu`); "
+                "`mydevagent bench` measures the speed")
     if "out of memory" in low or "requires more system memory" in low or "insufficient memory" in low:
-        return ("Il modello non entra in memoria",
-                "chiudi altri programmi o usa un profilo più piccolo (`mydevagent -p cpu` / `-p gpu8`)")
+        return ("The model does not fit in memory",
+                "close other programs or use a smaller profile (`mydevagent -p cpu` / `-p gpu8`)")
     if name in ("AuthenticationError", "PermissionDeniedError"):
-        return "Il server dei modelli ha rifiutato la chiave", "controlla LLM_API_KEY nel file .env"
-    return f"{name}: {text}", "prova /doctor"
+        return "The model server rejected the key", "check LLM_API_KEY in the .env file"
+    return f"{name}: {text}", "try /doctor"
 
 
 def _model_from_error(text: str) -> str:
@@ -236,17 +236,17 @@ def _model_from_error(text: str) -> str:
 # -------------------------------------------------------------------- hardware
 @dataclass
 class Hardware:
-    gpu_gb: float = 0.0  # VRAM NVIDIA (la scheda più grande)
+    gpu_gb: float = 0.0  # NVIDIA VRAM (the largest card)
     gpu_name: str = ""
-    apple_gb: float = 0.0  # memoria unificata Apple Silicon
+    apple_gb: float = 0.0  # Apple Silicon unified memory
     ram_gb: float = 0.0
 
     def describe(self) -> str:
         if self.gpu_gb:
-            return f"GPU {self.gpu_name or 'NVIDIA'} da {self.gpu_gb:.0f} GB"
+            return f"GPU {self.gpu_name or 'NVIDIA'} with {self.gpu_gb:.0f} GB"
         if self.apple_gb:
-            return f"Apple Silicon con {self.apple_gb:.0f} GB di memoria unificata"
-        return f"nessuna GPU rilevata, {self.ram_gb:.0f} GB di RAM" if self.ram_gb else "nessuna GPU rilevata"
+            return f"Apple Silicon with {self.apple_gb:.0f} GB of unified memory"
+        return f"no GPU detected, {self.ram_gb:.0f} GB of RAM" if self.ram_gb else "no GPU detected"
 
 
 def _run(cmd: list[str]) -> str:
@@ -290,7 +290,7 @@ def detect_hardware(run: Callable[[list[str]], str] = _run) -> Hardware:
 
 
 def recommend_profile(hw: Hardware) -> str:
-    usable = hw.gpu_gb or hw.apple_gb * 0.7  # su Mac una parte della memoria resta al sistema
+    usable = hw.gpu_gb or hw.apple_gb * 0.7  # on a Mac part of the memory stays with the system
     if usable >= 22:
         return "gpu24"
     if usable >= 14:

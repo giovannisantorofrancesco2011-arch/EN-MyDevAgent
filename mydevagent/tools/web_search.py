@@ -1,4 +1,4 @@
-"""Ricerca web con catena di fallback: Tavily → Firecrawl → SearXNG → DuckDuckGo."""
+"""Web search with a fallback chain: Tavily → Firecrawl → SearXNG → DuckDuckGo."""
 
 from __future__ import annotations
 
@@ -107,7 +107,7 @@ class DuckDuckGo(Provider):
             from ddgs import DDGS
         except ImportError:
             try:
-                from duckduckgo_search import DDGS  # nome legacy del pacchetto
+                from duckduckgo_search import DDGS  # legacy package name
             except ImportError:
                 return None
         return DDGS
@@ -149,7 +149,7 @@ class WebSearch:
                 continue
             try:
                 results = [r for r in provider.search(query, k) if r.url]
-            except Exception as exc:  # passa al provider successivo
+            except Exception as exc:  # move on to the next provider
                 response.errors.append(f"{provider.name}: {type(exc).__name__}: {exc}")
                 continue
             if results:

@@ -1,18 +1,18 @@
-"""/ultra-deep: pipeline a 35 agenti.
+"""/ultra-deep: the 35-agent pipeline.
 
-    1. Ricerca (se serve e sei online)   11 Research
-    2. Requisiti e piano con dibattito   16 Analista → 1 Architetto → 34 Avvocato del diavolo → (1 revisione)
-    3. Strategia di test                 29 Test Strategist
-    4. Implementazione                   specialisti pertinenti (agente sui file oppure artefatti in chat)
-    5. Test                              esecuzione reale + 4 Debug & Test
-    6. Mega quality gate in parallelo    9 10 12 14 24 26 30 31 33 + 27 Dipendenze (con web)
-                                         + "lens review" breve di tutti gli specialisti non usati
-    7. Integrazione                      35 Integratore → correzioni (max N giri) → di nuovo 5-7
-    8. Documentazione e rilascio         13 Docs + 32 Release
-    9. Consegna                          15 Formatter (eseguito dal chiamante, in streaming)
+    1. Research (if needed and online)   11 Research
+    2. Requirements and plan, debated    16 Analyst → 1 Architect → 34 Devil's advocate → (1 revision)
+    3. Test strategy                     29 Test Strategist
+    4. Implementation                    relevant specialists (agent working on files, or chat artifacts)
+    5. Tests                             real execution + 4 Debug & Test
+    6. Parallel mega quality gate        9 10 12 14 24 26 30 31 33 + 27 Dependencies (with web)
+                                         + a short "lens review" from every unused specialist
+    7. Integration                       35 Integrator → fixes (max N rounds) → 5-7 again
+    8. Documentation and release         13 Docs + 32 Release
+    9. Delivery                          15 Formatter (run by the caller, streaming)
 
-Ogni agente partecipa: quelli non pertinenti fanno una revisione breve (~150 token) e possono
-rispondere "non pertinente".
+Every agent takes part: the non-relevant ones do a short review (~150 tokens) and may
+answer "not relevant".
 """
 
 from __future__ import annotations
@@ -91,8 +91,8 @@ class UltraPipeline:
     def run(self, state: TeamState) -> TeamState:
         state.setdefault("trace", [])
 
-        # 1. ricerca, solo se serve
-        self._phase("fase 1/8 · ricerca")
+        # 1. research, only if needed
+        self._phase("phase 1/8 · research")
         if self._needs_research(state["request"]):
             if self.online:
                 state.update(self.team.research_node(state))
@@ -101,10 +101,10 @@ class UltraPipeline:
                 state["research"] = "OFFLINE: web research unavailable — flag what needs verification."
                 self._skip("research", "offline")
         else:
-            self._skip("research", "non necessaria")
+            self._skip("research", "not needed")
 
-        # 2. requisiti + piano + dibattito
-        self._phase("fase 2/8 · requisiti e piano con dibattito")
+        # 2. requirements + plan + debate
+        self._phase("phase 2/8 · requirements and plan, debated")
         requirements = self._agent("requirements", state, "Write the requirements.")
         specialists = self._implementers()
         plan_task = ("Produce the plan. Requirements from the analyst:\n" + requirements +
@@ -117,12 +117,12 @@ class UltraPipeline:
                                "critique (keep what is right, change what is wrong):\n" + critique)
         state["plan"] = f"{plan}\n\n## Requirements\n{requirements}"
 
-        # 3. strategia di test
-        self._phase("fase 3/8 · strategia di test")
+        # 3. test strategy
+        self._phase("phase 3/8 · test strategy")
         test_plan = self._agent("test_strategy", state, "Design the test strategy for this plan.")
 
-        # 4. implementazione
-        self._phase("fase 4/8 · implementazione")
+        # 4. implementation
+        self._phase("phase 4/8 · implementation")
         task = (f"# Task\n{state['request']}\n\n# Plan (Architect, reviewed by Devil's advocate)\n{state['plan']}"
                 f"\n\n# Test strategy (write these tests too)\n{test_plan}")
         if state.get("research"):
@@ -134,7 +134,7 @@ class UltraPipeline:
         while True:
             state["round"] = round_
             # 5. test
-            self._phase(f"fase 5/8 · test{f' (giro {round_ + 1})' if round_ else ''}")
+            self._phase(f"phase 5/8 · tests{f' (round {round_ + 1})' if round_ else ''}")
             state["test_report"] = self.impl.run_tests()
             state["artifacts"] = {"implementation": f"Implementer summary: {summary}\n\n{self.impl.subject()}"}
             debug = self._agent("debug_test", state, "Analyse the test report: root cause of any failure "
@@ -151,26 +151,26 @@ class UltraPipeline:
                                "text": "tests failing: " + truncate(debug, 800)})
 
             # 6. mega gate
-            self._phase("fase 6/8 · quality gate (tutti gli agenti)")
+            self._phase("phase 6/8 · quality gate (all agents)")
             issues += self._gates(state, specialists, round_)
             state["issues"] = [i for i in state.get("issues", []) if i.get("round", 0) != round_] + issues
 
-            # 7. integratore
-            self._phase("fase 7/8 · integrazione delle revisioni")
+            # 7. integrator
+            self._phase("phase 7/8 · integrating the reviews")
             decision, fixes = self._integrate(state)
             forced = [f"- [BLOCKER] {i['text']}" for i in issues if i["agent"] == "integrator"]
-            if forced:  # controllo deterministico: nessuna modifica = sempre da correggere
+            if forced:  # deterministic check: no changes = always needs fixing
                 decision, fixes = "FIX", forced + fixes
             if decision == "SHIP" or round_ >= self.max_rounds:
                 if decision != "SHIP":
-                    self._phase(f"limite di {self.max_rounds} giri di correzione raggiunto")
+                    self._phase(f"limit of {self.max_rounds} fix rounds reached")
                 break
             round_ += 1
-            self._phase(f"correzioni, giro {round_}: {len(fixes)} punti")
+            self._phase(f"fixes, round {round_}: {len(fixes)} items")
             summary = self.impl.fix("\n".join(fixes))
 
-        # 8. documentazione e rilascio
-        self._phase("fase 8/8 · documentazione e rilascio")
+        # 8. documentation and release
+        self._phase("phase 8/8 · documentation and release")
         state["artifacts"] = {"implementation": f"Implementer summary: {summary}\n\n{self.impl.subject()}"}
         notes = self._parallel([
             ("docs", state, "Write the minimal documentation updates for this change.", None),
@@ -181,7 +181,7 @@ class UltraPipeline:
                               "docs": notes["docs"], "release": notes["release"]}
         return state
 
-    # ------------------------------------------------------------ fasi
+    # ------------------------------------------------------------ phases
     def _needs_research(self, request: str) -> bool:
         if self.route.research:
             return True
@@ -201,7 +201,7 @@ class UltraPipeline:
         return chosen or ["language"]
 
     def _web_facts(self, subject: str) -> str:
-        """Ricerca mirata sulle librerie usate nel codice (per Fact-checker e Dipendenze)."""
+        """Targeted search on the libraries used in the code (for the Fact-checker and Dependencies)."""
         if not (self.online and self.web is not None):
             return "OFFLINE or web disabled: verify library APIs and versions manually."
         packages: list[str] = []
@@ -244,14 +244,14 @@ class UltraPipeline:
         decision = match.group(1).upper() if match else ("FIX" if blocking else "SHIP")
         if decision == "FIX" and not blocking:
             decision = "SHIP"
-        if decision == "SHIP" and blocking:  # l'integratore non può ignorare BLOCKER/MAJOR che lui stesso elenca
+        if decision == "SHIP" and blocking:  # the integrator cannot ignore BLOCKER/MAJOR issues it lists itself
             decision = "FIX"
         return decision, blocking
 
 
 # ---------------------------------------------------------------- implementer
 class ChatImplementer:
-    """Modalità chat: gli specialisti producono artefatti (codice nei blocchi), test nella sandbox."""
+    """Chat mode: the specialists produce artifacts (code in blocks), tests run in the sandbox."""
 
     def __init__(self, team: Team, state: TeamState) -> None:
         self.team = team
@@ -299,7 +299,7 @@ class ChatImplementer:
 def issues_summary(state: TeamState) -> str:
     issues = latest_issues(state)
     if not issues:
-        return "✅ Review ultra-deep: nessun problema bloccante"
+        return "✅ Ultra-deep review: no blocking issues"
     blocking = [i for i in issues if i["severity"] in ("BLOCKER", "MAJOR")]
-    return (f"⚠️ Review ultra-deep: {len(blocking)} problemi bloccanti residui" if blocking
-            else f"✅ Review ultra-deep: {len(issues)} note minori")
+    return (f"⚠️ Ultra-deep review: {len(blocking)} blocking issues remaining" if blocking
+            else f"✅ Ultra-deep review: {len(issues)} minor notes")

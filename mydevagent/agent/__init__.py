@@ -1,4 +1,4 @@
-"""Modalità agente: il modello legge, modifica e verifica il progetto con dei tool, in un ciclo."""
+"""Agent mode: the model reads, edits and verifies the project with tools, in a loop."""
 
 from .checkpoints import CheckpointStore
 from .loop import AgentLoop, AgentResult

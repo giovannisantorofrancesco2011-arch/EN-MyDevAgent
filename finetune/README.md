@@ -1,42 +1,42 @@
-# Fine-tuning QLoRA di MyDevAgent sui tuoi progetti
+# QLoRA fine-tuning of MyDevAgent on your projects
 
-| File | Cosa fa |
+| File | What it does |
 |---|---|
-| `build_dataset.py` | dai tuoi repo git → `data/train.jsonl`, `data/val.jsonl`, `data/fim.jsonl` |
-| `config_qlora.yaml` | modello base, LoRA (r=16), iperparametri, export |
-| `train_qlora.py` | training QLoRA 4-bit con Unsloth + TRL |
-| `export_gguf.sh` | merge + quantizzazione GGUF + `ollama create mydevagent-custom` |
+| `build_dataset.py` | from your git repos → `data/train.jsonl`, `data/val.jsonl`, `data/fim.jsonl` |
+| `config_qlora.yaml` | base model, LoRA (r=16), hyperparameters, export |
+| `train_qlora.py` | 4-bit QLoRA training with Unsloth + TRL |
+| `export_gguf.sh` | merge + GGUF quantization + `ollama create mydevagent-custom` |
 
-## Requisiti
-- GPU NVIDIA con 8 GB+ (1.5B/3B), ~10 GB (7B), ~16 GB (14B). Linux o WSL2.
-- Senza GPU: carica la cartella su Google Colab/Kaggle (T4 16 GB gratuita) ed esegui gli stessi comandi.
-- `pip install -e ".[finetune]"` (installa unsloth, trl, datasets, peft, transformers).
+## Requirements
+- NVIDIA GPU with 8 GB+ (1.5B/3B), ~10 GB (7B), ~16 GB (14B). Linux or WSL2.
+- No GPU: upload the folder to Google Colab/Kaggle (free 16 GB T4) and run the same commands.
+- `pip install -e ".[finetune]"` (installs unsloth, trl, datasets, peft, transformers).
 
-## Passi
+## Steps
 ```bash
-# 1. Dataset (commit piccoli e ben descritti funzionano meglio)
+# 1. Dataset (small, well-described commits work best)
 python finetune/build_dataset.py ~/code/app ~/code/lib --max-commits 3000 --fim-per-repo 300
 
-# (opzionale) tue coppie domanda/risposta, una per riga:
-#   {"prompt": "Come gestiamo gli errori nei servizi?", "response": "Usiamo Result<T, AppError> ..."}
+# (optional) your own question/answer pairs, one per line:
+#   {"prompt": "How do we handle errors in services?", "response": "We use Result<T, AppError> ..."}
 python finetune/build_dataset.py ~/code/app --extra finetune/my_qa.jsonl
 
 # 2. Training
 python finetune/train_qlora.py --config finetune/config_qlora.yaml
 
-# 3. Export in Ollama
+# 3. Export to Ollama
 bash finetune/export_gguf.sh
 
-# 4. Uso nel team a 15 agenti
+# 4. Use it in the 15-agent team
 MYDEVAGENT_MODEL_MAIN=mydevagent-custom mydevagent chat
 ```
 
-## Consigli
-- **Qualità > quantità**: elimina commit rumorosi (format, bump, merge). Il builder filtra già quelli
-  ovvi e i file generati.
-- **Epoche**: 1–2. Più epoche = overfitting sul tuo codice e perdita di capacità generali.
-- **Valuta** confrontando `mydevagent-custom` e il modello base sugli stessi 10–20 task reali.
-- **FIM**: gli esempi fill-in-the-middle migliorano l'autocomplete; se addestri solo per la chat
-  imposta `fim_ratio: 0`. Per un autocomplete personalizzato addestra un modello *base*
-  (`unsloth/Qwen2.5-Coder-1.5B`) solo sul file FIM e usalo in Continue come modello `autocomplete`.
-- **Privacy**: tutto resta sul tuo PC. Controlla comunque `data/*.jsonl` prima di usare Colab.
+## Tips
+- **Quality > quantity**: remove noisy commits (formatting, bumps, merges). The builder already filters the
+  obvious ones and generated files.
+- **Epochs**: 1–2. More epochs = overfitting on your code and loss of general abilities.
+- **Evaluate** by comparing `mydevagent-custom` and the base model on the same 10–20 real tasks.
+- **FIM**: fill-in-the-middle examples improve autocomplete; if you only train for chat
+  set `fim_ratio: 0`. For a personalized autocomplete, train a *base* model
+  (`unsloth/Qwen2.5-Coder-1.5B`) on the FIM file only and use it in Continue as the `autocomplete` model.
+- **Privacy**: everything stays on your PC. Still, check `data/*.jsonl` before using Colab.

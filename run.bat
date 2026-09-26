@@ -1,27 +1,27 @@
 @echo off
-rem MyDevAgent - avvio con un comando (Windows), senza attivare l'ambiente virtuale.
-rem Uso, dalla cartella del tuo progetto:   C:\percorso\di\mydevagent\run.bat   [opzioni di mydevagent]
+rem MyDevAgent - one-command start (Windows), without activating the virtual environment.
+rem Usage, from your project folder:   C:\path\to\mydevagent\run.bat   [mydevagent options]
 setlocal
 set "HERE=%~dp0"
 set "PY=%HERE%.venv\Scripts\python.exe"
 set "PYTHONUTF8=1"
-rem python -m e non mydevagent.exe: l'exe smette di funzionare se la cartella viene spostata o rinominata
-"%PY%" -c "import mydevagent.cli" >nul 2>&1 || call :ripara || goto errore
+rem python -m and not mydevagent.exe: the exe stops working if the folder is moved or renamed
+"%PY%" -c "import mydevagent.cli" >nul 2>&1 || call :repair || goto failed
 "%PY%" -m mydevagent.cli %*
-if errorlevel 1 goto errore
+if errorlevel 1 goto failed
 exit /b 0
 
-:ripara
-if not exist "%PY%" goto installa
-echo Sistemo l'installazione di MyDevAgent (cartella spostata o aggiornata)...
+:repair
+if not exist "%PY%" goto install
+echo Repairing the MyDevAgent installation (folder moved or updated)...
 "%PY%" -m pip install -q -e "%HERE%.[server,search]" && "%PY%" -c "import mydevagent.cli" >nul 2>&1 && exit /b 0
-:installa
-echo MyDevAgent non e' ancora installato: avvio l'installazione (una volta sola).
+:install
+echo MyDevAgent isn't installed yet: starting the installation (only once).
 powershell -NoProfile -ExecutionPolicy Bypass -File "%HERE%scripts\install.ps1"
 exit /b %errorlevel%
 
-:errore
+:failed
 echo.
-echo MyDevAgent si e' chiuso con un errore: il messaggio e' qui sopra.
+echo MyDevAgent exited with an error: the message is above.
 pause
 exit /b 1

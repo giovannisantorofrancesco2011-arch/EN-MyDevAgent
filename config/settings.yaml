@@ -1,13 +1,13 @@
 # =====================================================================
-#  MyDevAgent — configurazione principale
-#  Ogni valore può essere sovrascritto da variabili d'ambiente (.env):
+#  MyDevAgent — main configuration
+#  Every value can be overridden by environment variables (.env):
 #    MYDEVAGENT_PROFILE, LLM_BASE_URL, LLM_API_KEY, MYDEVAGENT_MODEL_<TIER>
 # =====================================================================
 
-# Profilo hardware attivo: cpu | gpu8 | gpu16 | gpu24
+# Active hardware profile: cpu | gpu8 | gpu16 | gpu24
 profile: gpu8
 
-# Server LLM compatibili OpenAI. Tutti espongono /v1/chat/completions.
+# OpenAI-compatible LLM servers. They all expose /v1/chat/completions.
 backends:
   ollama:   { base_url: "http://localhost:11434/v1", api_key: "ollama" }
   lmstudio: { base_url: "http://localhost:1234/v1",  api_key: "lm-studio" }
@@ -15,13 +15,13 @@ backends:
   llamacpp: { base_url: "http://localhost:8080/v1",  api_key: "none" }
 default_backend: ollama
 
-# Tier di modelli per profilo.
-#   main      -> codice e analisi (usato dalla maggior parte degli agenti)
-#   fast      -> router LLM opzionale, generazione di query di ricerca
-#   reasoning -> modalità deep (Architect + quality gate). Uguale a main = nessuno swap di VRAM
-#   vision    -> screenshot / mockup (opzionale)
-#   embed     -> indice RAG della codebase
-# Un tier può anche essere { model: "...", backend: "vllm" } per mischiare server diversi.
+# Model tiers per profile.
+#   main      -> code and analysis (used by most agents)
+#   fast      -> optional LLM router, search query generation
+#   reasoning -> deep mode (Architect + quality gate). Same as main = no VRAM swap
+#   vision    -> screenshots / mockups (optional)
+#   embed     -> codebase RAG index
+# A tier can also be { model: "...", backend: "vllm" } to mix different servers.
 profiles:
   cpu:
     main: "qwen2.5-coder:3b"
@@ -34,7 +34,7 @@ profiles:
   gpu8:
     main: "qwen2.5-coder:7b"
     fast: "qwen2.5-coder:1.5b"
-    reasoning: "qwen2.5-coder:7b"   # alternativa con thinking: "qwen3:8b" (swap di modello in VRAM)
+    reasoning: "qwen2.5-coder:7b"   # thinking alternative: "qwen3:8b" (model swap in VRAM)
     vision: "qwen2.5vl:7b"
     embed: "nomic-embed-text"
     num_ctx: 16384
@@ -42,24 +42,24 @@ profiles:
   gpu16:
     main: "qwen2.5-coder:14b"
     fast: "qwen2.5-coder:1.5b"
-    reasoning: "qwen2.5-coder:14b"  # alternativa: "qwen3:14b" o "deepseek-r1:14b"
+    reasoning: "qwen2.5-coder:14b"  # alternative: "qwen3:14b" or "deepseek-r1:14b"
     vision: "qwen2.5vl:7b"
     embed: "nomic-embed-text"
     num_ctx: 32768
     native_tools: true
   gpu24:
-    main: "qwen3-coder:30b"         # MoE ~3B parametri attivi: qualità alta e molto veloce
+    main: "qwen3-coder:30b"         # MoE ~3B active parameters: high quality and very fast
     fast: "qwen2.5-coder:1.5b"
-    reasoning: "qwen3-coder:30b"    # alternativa: "qwen3:30b" (thinking) o "gpt-oss:20b"
+    reasoning: "qwen3-coder:30b"    # alternative: "qwen3:30b" (thinking) or "gpt-oss:20b"
     vision: "qwen2.5vl:7b"
     embed: "nomic-embed-text"
     num_ctx: 32768
     native_tools: true
 
-# Modalità di esecuzione (scelte dal router, oppure forzate con /fast /balanced /deep)
+# Execution modes (picked by the router, or forced with /fast /balanced /deep)
 modes:
   fast:
-    # 1 sola chiamata LLM: specialista + regole del Formatter fuse nello stesso prompt
+    # a single LLM call: specialist + Formatter rules merged into the same prompt
     think: false
   balanced:
     gate: [reviewer]
@@ -72,7 +72,7 @@ modes:
     think: true
     docs: true
   ultra-deep:
-    # 35 agenti: vedi mydevagent/ultra.py e config/agents_ultra.yaml
+    # 35 agents: see mydevagent/ultra.py and config/agents_ultra.yaml
     gate: [security, performance, edge_cases, reviewer, a11y_i18n, observability, threat_model, scalability, fact_checker, dependencies]
     max_review_rounds: 3
     think: true
@@ -80,25 +80,25 @@ modes:
 
 router:
   default_mode: auto        # auto | fast | balanced | deep
-  use_llm: false            # true = chiede al modello "fast" quando le euristiche sono incerte
-  fast_max_chars: 320       # richieste più corte e con un solo dominio -> fast
+  use_llm: false            # true = ask the "fast" model when the heuristics are unsure
+  fast_max_chars: 320       # shorter requests with a single domain -> fast
   deep_min_chars: 1500
   deep_min_domains: 4
 
 context:
-  history_turns: 4          # turni di conversazione passati inviati agli agenti
-  max_section_chars: 6000   # troncamento di ogni sezione della blackboard
-  max_file_chars: 12000     # troncamento dei file allegati
-  max_history_chars: 1500   # per singolo messaggio di storia
+  history_turns: 4          # past conversation turns sent to the agents
+  max_section_chars: 6000   # truncation of each blackboard section
+  max_file_chars: 12000     # truncation of attached files
+  max_history_chars: 1500   # per single history message
 
 tools:
   web:
     enabled: true
-    providers: [tavily, firecrawl, searxng, duckduckgo]   # ordine di fallback
+    providers: [tavily, firecrawl, searxng, duckduckgo]   # fallback order
     max_results: 5
-    fetch_top_n: 1          # quante pagine leggere per intero (0 = solo snippet)
+    fetch_top_n: 1          # how many pages to read in full (0 = snippets only)
     max_page_chars: 6000
-    allow_private_urls: false   # blocca localhost/IP privati (anti-SSRF)
+    allow_private_urls: false   # block localhost/private IPs (anti-SSRF)
     timeout_s: 12
   connectivity:
     check_url: "https://www.gstatic.com/generate_204"
@@ -106,7 +106,7 @@ tools:
     cache_s: 60
   sandbox:
     enabled: true
-    backend: docker          # docker | local (local = subprocess, SOLO se allow_unsafe_local)
+    backend: docker          # docker | local (local = subprocess, ONLY if allow_unsafe_local)
     allow_unsafe_local: false
     timeout_s: 20
     memory: "512m"
@@ -126,10 +126,10 @@ tools:
     top_k: 6
     chunk_lines: 60
     chunk_overlap: 10
-  # Moduli Python con tool personalizzati (decorator @tool), es. ["my_tools.jira"]
+  # Python modules with custom tools (@tool decorator), e.g. ["my_tools.jira"]
   custom: []
 
 server:
   host: "127.0.0.1"
   port: 8000
-  show_progress: true       # mostra una riga di avanzamento degli agenti nella risposta
+  show_progress: true       # show an agent progress line in the reply

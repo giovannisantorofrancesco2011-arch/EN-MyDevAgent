@@ -1,4 +1,4 @@
-# QLoRA "leggero" su un modello coder: 7B in ~10GB VRAM, 14B in ~16GB, 1.5B/3B anche su 6-8GB.
+# "Lightweight" QLoRA on a coder model: 7B in ~10GB VRAM, 14B in ~16GB, 1.5B/3B even on 6-8GB.
 base_model: unsloth/Qwen2.5-Coder-7B-Instruct-bnb-4bit   # alternative: unsloth/Qwen2.5-Coder-14B-Instruct-bnb-4bit
 max_seq_length: 4096
 load_in_4bit: true
@@ -12,8 +12,8 @@ lora:
 data:
   train: finetune/data/train.jsonl
   val: finetune/data/val.jsonl
-  fim: finetune/data/fim.jsonl      # mescolato al train (migliora l'autocomplete sul tuo stile)
-  fim_ratio: 0.3                    # quota massima di esempi FIM rispetto agli esempi chat
+  fim: finetune/data/fim.jsonl      # mixed into train (improves autocomplete on your style)
+  fim_ratio: 0.3                    # maximum share of FIM examples relative to chat examples
 
 train:
   output_dir: finetune/outputs/mydevagent-lora
@@ -31,5 +31,5 @@ train:
 
 export:
   gguf_dir: finetune/outputs/gguf
-  quantization: q4_k_m              # q5_k_m / q8_0 per più qualità
+  quantization: q4_k_m              # q5_k_m / q8_0 for more quality
   ollama_name: mydevagent-custom

@@ -1,4 +1,4 @@
-"""Rilevamento online/offline con cache (le funzioni web si disattivano da sole offline)."""
+"""Cached online/offline detection (web features switch themselves off when offline)."""
 
 from __future__ import annotations
 

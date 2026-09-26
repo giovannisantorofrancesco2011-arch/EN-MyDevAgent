@@ -1,18 +1,18 @@
-"""Skill: istruzioni riutilizzabili in cartelle, caricate solo quando servono (come le skill di Claude Code).
+"""Skills: reusable instructions in folders, loaded only when needed (like Claude Code skills).
 
-Una skill è una cartella con un `SKILL.md` (più eventuali file di supporto: esempi, script, modelli) oppure
-un singolo file `<nome>.md`. In testa al file, opzionale:
+A skill is a folder with a `SKILL.md` (plus optional supporting files: examples, scripts, templates) or
+a single `<name>.md` file. At the top of the file, optionally:
 
     ---
     name: release-notes
-    description: Scrive le note di rilascio dal git log. Usala quando l'utente chiede un changelog.
+    description: Writes release notes from the git log. Use it when the user asks for a changelog.
     ---
 
-All'agente arriva solo l'elenco nome + descrizione; il contenuto lo legge con il tool `skill` quando una
-richiesta corrisponde. Cartelle lette, dalla più specifica: `.mydevagent/skills` e `.claude/skills` del
-progetto, `~/.mydevagent/skills`, `~/.claude/skills`, più quelle in MYDEVAGENT_SKILLS_DIRS (separate da `;`
-su Windows e `:` altrove), per esempio la cartella delle skill di un altro agente. Poi le skill dei
-plugin (vedi plugins.py).
+The agent only receives the list of names + descriptions; it reads the content with the `skill` tool when a
+request matches. Folders read, from the most specific: the project's `.mydevagent/skills` and
+`.claude/skills`, `~/.mydevagent/skills`, `~/.claude/skills`, plus those in MYDEVAGENT_SKILLS_DIRS (separated
+by `;` on Windows and `:` elsewhere), for example another agent's skills folder. Then the plugins' skills
+(see plugins.py).
 """
 
 from __future__ import annotations
@@ -34,8 +34,8 @@ FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 class Skill:
     name: str
     description: str
-    path: Path  # il SKILL.md (o il file .md singolo)
-    source: str  # progetto · utente · cartella extra
+    path: Path  # the SKILL.md (or the single .md file)
+    source: str  # project · user · extra folder
 
     @property
     def folder(self) -> Path | None:
@@ -51,7 +51,7 @@ class Skill:
                       if p.is_file() and p != self.path and not p.name.startswith("."))[:50]
 
     def read(self, file: str | None = None) -> str:
-        """Il contenuto della skill, oppure uno dei suoi file di supporto (solo dentro la sua cartella)."""
+        """The skill's content, or one of its supporting files (only inside its folder)."""
         if not file:
             extra = self.files()
             listing = ("\n\nSupporting files (read them with the skill tool and `file`):\n"
@@ -66,7 +66,7 @@ class Skill:
 
 
 def split_frontmatter(text: str) -> tuple[dict[str, str], str]:
-    """Frontmatter semplice `chiave: valore` → (metadati, corpo)."""
+    """Simple `key: value` frontmatter → (metadata, body)."""
     match = FRONTMATTER_RE.match(text)
     if not match:
         return {}, text
@@ -89,9 +89,9 @@ def _describe(body: str) -> str:
 def skill_dirs(root: Path) -> list[tuple[Path, str]]:
     home = Path.home()
     state = Path(os.environ.get("MYDEVAGENT_STATE_DIR", home / ".mydevagent"))
-    dirs = [(root / ".mydevagent" / "skills", "progetto"), (root / ".claude" / "skills", "progetto"),
-            (state / "skills", "utente"), (home / ".claude" / "skills", "utente")]
-    for plugin in load_plugins(root).values():  # skill dei plugin (gli agenti sono in subagents.py)
+    dirs = [(root / ".mydevagent" / "skills", "project"), (root / ".claude" / "skills", "project"),
+            (state / "skills", "user"), (home / ".claude" / "skills", "user")]
+    for plugin in load_plugins(root).values():  # plugins' skills (agents are in subagents.py)
         dirs += [(d, f"plugin {plugin.name}") for d in plugin.dirs("skills")]
     for raw in os.environ.get("MYDEVAGENT_SKILLS_DIRS", "").split(os.pathsep):
         if raw.strip():
@@ -100,7 +100,7 @@ def skill_dirs(root: Path) -> list[tuple[Path, str]]:
 
 
 def load_skills(root: Path) -> dict[str, Skill]:
-    """nome → skill. A parità di nome vince la cartella più specifica (il progetto)."""
+    """name → skill. On a name clash the most specific folder wins (the project)."""
     found: dict[str, Skill] = {}
     for folder, source in skill_dirs(Path(root)):
         if not folder.is_dir():
@@ -132,6 +132,6 @@ def skills_prompt(skills: dict[str, Skill]) -> str:
 
 
 def short(text: str, limit: int = 160) -> str:
-    """Nel prompt basta l'inizio: con tanti plugin l'elenco resta piccolo anche per i modelli locali."""
+    """The beginning is enough for the prompt: with many plugins the list stays small even for local models."""
     text = re.split(r"\s*(?:<example>|Examples?:)", text)[0]
     return text if len(text) <= limit else text[:limit].rsplit(" ", 1)[0] + "…"

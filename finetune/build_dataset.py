@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Costruisce un dataset di fine-tuning dai TUOI repository git.
+"""Builds a fine-tuning dataset from YOUR git repositories.
 
-Genera tre tipi di esempi (formato chat JSONL compatibile con TRL/Unsloth):
-  1. commit  → "applica questa modifica" : prima/dopo di un file per ogni commit piccolo e ben descritto
-  2. fim     → fill-in-the-middle (autocomplete) con i token FIM di Qwen2.5-Coder
-  3. extra   → tue coppie domanda/risposta in un file JSONL ({"prompt": ..., "response": ...})
+Generates three kinds of examples (chat JSONL format compatible with TRL/Unsloth):
+  1. commit  → "apply this change" : before/after of a file for each small, well-described commit
+  2. fim     → fill-in-the-middle (autocomplete) with Qwen2.5-Coder's FIM tokens
+  3. extra   → your own question/answer pairs in a JSONL file ({"prompt": ..., "response": ...})
 
-I file con segreti (.env, chiavi, token) e le righe sospette vengono scartati.
+Files with secrets (.env, keys, tokens) and suspicious lines are discarded.
 
-Uso:
-  python finetune/build_dataset.py ~/code/progetto1 ~/code/progetto2 --out finetune/data
+Usage:
+  python finetune/build_dataset.py ~/code/project1 ~/code/project2 --out finetune/data
   python finetune/build_dataset.py ~/code/app --extra my_qa.jsonl --max-commits 3000
 """
 
@@ -128,9 +128,9 @@ def main() -> None:
     ap.add_argument("repos", nargs="+", type=Path)
     ap.add_argument("--out", type=Path, default=Path("finetune/data"))
     ap.add_argument("--max-commits", type=int, default=2000)
-    ap.add_argument("--max-chars", type=int, default=16000, help="dimensione massima prima+dopo di un file")
+    ap.add_argument("--max-chars", type=int, default=16000, help="maximum before+after size of a file")
     ap.add_argument("--fim-per-repo", type=int, default=300)
-    ap.add_argument("--extra", type=Path, help="JSONL con coppie {prompt, response}")
+    ap.add_argument("--extra", type=Path, help="JSONL with {prompt, response} pairs")
     ap.add_argument("--val-ratio", type=float, default=0.05)
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
@@ -140,10 +140,10 @@ def main() -> None:
     for repo in args.repos:
         repo = repo.expanduser().resolve()
         if not (repo / ".git").exists():
-            print(f"skip (non è un repo git): {repo}")
+            print(f"skip (not a git repo): {repo}")
             continue
         c, f = commit_examples(repo, args.max_commits, args.max_chars), fim_examples(repo, args.fim_per_repo, rng)
-        print(f"{repo.name}: {len(c)} esempi da commit, {len(f)} FIM")
+        print(f"{repo.name}: {len(c)} examples from commits, {len(f)} FIM")
         chat += c
         fim += f
     if args.extra:
@@ -157,7 +157,7 @@ def main() -> None:
         with (args.out / name).open("w", encoding="utf-8") as fh:
             for row in rows:
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
-        print(f"→ {args.out / name}: {len(rows)} esempi")
+        print(f"→ {args.out / name}: {len(rows)} examples")
 
 
 if __name__ == "__main__":

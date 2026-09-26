@@ -1,4 +1,4 @@
-"""Rendering stile Claude Code: righe ⏺/⎿ per agenti e tool, diff, todo, spinner, Markdown in streaming."""
+"""Claude Code-style rendering: ⏺/⎿ lines for agents and tools, diffs, todos, spinner, streaming Markdown."""
 
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ MAX_DIFF_LINES = 40
 TOOL_LABELS = {
     "read_file": "Read", "list_files": "List", "grep": "Search", "bash": "Bash", "run_tests": "Test",
     "web_search": "Web", "web_fetch": "Fetch", "rag_search": "Codebase", "skill": "Skill", "mcp": "MCP",
-    "task": "Agent", "preview": "Anteprima",
+    "task": "Agent", "preview": "Preview",
 }
 TODO_ICONS = {"completed": "[green]☑[/]", "in_progress": f"[{ACCENT}]◼[/]", "pending": "[dim]☐[/]"}
 
@@ -38,10 +38,10 @@ def markdown(text: str) -> Markdown:
 
 
 def split_complete(text: str) -> tuple[str, str]:
-    """Divide il testo in (blocchi completi, coda in corso) all'ultima riga vuota fuori dai blocchi di codice.
+    """Splits the text into (complete blocks, tail in progress) at the last blank line outside code blocks.
 
-    I blocchi completi vengono stampati definitivamente nello scrollback; solo la coda resta nella zona
-    animata, così anche risposte lunghe non sforano l'altezza del terminale.
+    Complete blocks are printed permanently into the scrollback; only the tail stays in the animated
+    area, so even long answers don't overflow the terminal height.
     """
     idx = text.rfind("\n\n")
     while idx > 0:
@@ -52,7 +52,7 @@ def split_complete(text: str) -> tuple[str, str]:
 
 
 def short_args(args: dict[str, Any], limit: int = 70) -> str:
-    if len(args) == 1:  # un solo argomento: mostra il valore, come Claude Code → Read(src/app.py)
+    if len(args) == 1:  # a single argument: show the value, like Claude Code → Read(src/app.py)
         value = str(next(iter(args.values()))).replace("\n", " ")
         return value if len(value) <= limit else value[: limit - 1] + "…"
     parts = []
@@ -66,7 +66,7 @@ def short_args(args: dict[str, Any], limit: int = 70) -> str:
 def render_diff(diff: str, max_lines: int = MAX_DIFF_LINES) -> RenderableType:
     lines = [line for line in diff.splitlines() if not line.startswith(("---", "+++"))]
     extra = len(lines) - max_lines
-    body = "\n".join(lines[:max_lines]) + (f"\n… altre {extra} righe (/diff per vederle tutte)" if extra > 0 else "")
+    body = "\n".join(lines[:max_lines]) + (f"\n… {extra} more lines (/diff to see them all)" if extra > 0 else "")
     return Syntax(body, "diff", theme=THEME["diff"], word_wrap=True, background_color="default")
 
 
@@ -77,12 +77,12 @@ def render_todos(todos: list[dict[str, str]]) -> str:
 
 
 class TurnRenderer:
-    """Riceve eventi e chunk dall'orchestratore e li disegna. Tutti i metodi girano nel thread della UI."""
+    """Receives events and chunks from the orchestrator and draws them. All methods run on the UI thread."""
 
     def __init__(self, console: Console, names: dict[str, str]) -> None:
         self.console = console
-        self.names = names  # chiave agente → nome leggibile
-        self.status = "Sto ragionando"
+        self.names = names  # agent key → readable name
+        self.status = "Thinking"
         self.started = time.monotonic()
         self.tail = ""
         self.answer = ""
@@ -90,32 +90,32 @@ class TurnRenderer:
         self.summary = ""
         self.cancelled = False
         self.todos: list[dict[str, str]] = []
-        self.shown_diffs: set[str] = set()  # diff già mostrati nella richiesta di conferma
+        self.shown_diffs: set[str] = set()  # diffs already shown in the confirmation request
         self.step = 0
 
-    # ------------------------------------------------------------ eventi
+    # ------------------------------------------------------------ events
     def on_event(self, event: dict[str, Any]) -> None:
         kind = event["type"]
         c = self.console
         if kind == "route":
             agents = [self.names.get(a, a) for a in event["agents"] if a != "formatter"]
-            suffix = " · agente" if event.get("agentic") else ""
+            suffix = " · agent" if event.get("agentic") else ""
             if event["mode"] == "ultra-deep":
-                c.print(f"[{ACCENT}]⏺[/] [bold]Team ultra-deep[/][dim]{suffix} · 35 agenti · ricerca web se serve[/]")
+                c.print(f"[{ACCENT}]⏺[/] [bold]Team ultra-deep[/][dim]{suffix} · 35 agents · web search if needed[/]")
             elif event["mode"] == "fast":
                 c.print(f"[dim]⏺ fast{suffix} · {agents[0] if agents else ''}[/]")
             else:
-                c.print(f"[{ACCENT}]⏺[/] [bold]Team {event['mode']}[/][dim]{suffix} · {len(agents)} agenti[/]")
+                c.print(f"[{ACCENT}]⏺[/] [bold]Team {event['mode']}[/][dim]{suffix} · {len(agents)} agents[/]")
                 c.print(f"  [dim]⎿  {' → '.join(agents)}[/]")
             if event.get("suggest_ultra"):
-                c.print("  [dim]⎿  suggerimento: per un lavoro di questa portata prova [bold]/ultra-deep[/] (35 agenti)[/]")
+                c.print("  [dim]⎿  tip: for a job this size try [bold]/ultra-deep[/] (35 agents)[/]")
         elif kind == "agent_start":
-            self.status = f"{event.get('name', event['agent'])} sta lavorando"
+            self.status = f"{event.get('name', event['agent'])} is working"
             if event["agent"] == "formatter":
-                self.status = "Scrivo la risposta"
+                self.status = "Writing the answer"
         elif kind == "agent_end" and event["agent"] != "final":
             tokens = event.get("prompt_tokens", 0) + event.get("completion_tokens", 0)
-            if not event.get("quiet") and not event.get("counted"):  # «counted»: già arrivati come llm_call
+            if not event.get("quiet") and not event.get("counted"):  # "counted": already arrived as llm_call
                 self.tokens += tokens
             name = event.get("name", event["agent"])
             if event.get("error"):
@@ -127,14 +127,14 @@ class TurnRenderer:
             c.print(f"[dim]⏺ {escape(event['name'])}\n  ⎿  {escape(event['reason'])}[/]")
         elif kind == "agent_step":
             self.step = event["step"]
-            self.status = f"Sto lavorando (passo {self.step})"
+            self.status = f"Working (step {self.step})"
         elif kind == "llm_call":
             self.tokens += event.get("prompt_tokens", 0) + event.get("completion_tokens", 0)
         elif kind == "agent_text":
             c.print(f"[white]⏺[/] {escape(event['text'].strip())}")
         elif kind == "tool_call":
             if event["tool"] in ("edit_file", "write_file", "todo_write"):
-                return  # mostrati dagli eventi diff/todo
+                return  # shown by the diff/todo events
             label = TOOL_LABELS.get(event["tool"], event["tool"])
             c.print(f"[{ACCENT}]⏺[/] [bold]{label}[/]([dim]{escape(short_args(event.get('args', {})))}[/])")
             self.status = f"{label}…"
@@ -156,9 +156,9 @@ class TurnRenderer:
             c.print(f"[{ACCENT}]⏺[/] [bold]Todo[/] [dim]({done}/{len(self.todos)})[/]")
             c.print(render_todos(self.todos))
         elif kind == "tests":
-            c.print(f"  {'[green]⎿  ✓ test passati' if event['ok'] else '[red]⎿  ✗ test falliti'}[/]")
+            c.print(f"  {'[green]⎿  ✓ tests passed' if event['ok'] else '[red]⎿  ✗ tests failed'}[/]")
         elif kind == "info":
-            if event["text"].startswith("fase "):
+            if event["text"].startswith("phase "):
                 c.print(f"[{ACCENT}]✻[/] [bold]{escape(event['text'])}[/]")
                 self.status = event["text"]
             else:
@@ -179,16 +179,16 @@ class TurnRenderer:
         if done.strip():
             self.console.print(markdown(done))
 
-    # ------------------------------------------------------------- vista
+    # -------------------------------------------------------------- view
     def view(self) -> RenderableType:
         elapsed = time.monotonic() - self.started
         status = Text.from_markup(
-            f"\n[{ACCENT}]{escape(self.status)}…[/]\n[dim]esc per interrompere · {elapsed:.0f}s · "
-            f"{self.tokens + len(self.answer) // 4:,} tok[/]".replace(",", "."))
+            f"\n[{ACCENT}]{escape(self.status)}…[/]\n[dim]esc to interrupt · {elapsed:.0f}s · "
+            f"{self.tokens + len(self.answer) // 4:,} tok[/]")
         working = Table.grid(padding=(0, 2))
         working.add_column(no_wrap=True)
         working.add_column()
-        # Vio lavora: si guarda intorno e muove i tentacoli
+        # Vio at work: looks around and wiggles its tentacles
         working.add_row(mascot.render("think" if int(elapsed) % 4 else "look", int(elapsed * 2)), status)
         parts: list[RenderableType] = []
         if self.tail.strip():
@@ -204,6 +204,6 @@ class TurnRenderer:
             self.console.print(markdown(self.tail))
         self.tail = ""
         if self.cancelled:
-            self.console.print("[yellow]⏺ Interrotto dall'utente[/]")
+            self.console.print("[yellow]⏺ Interrupted by the user[/]")
         if self.summary:
             self.console.print(f"[{ACCENT}]✻[/] [dim]{escape(self.summary)}[/]")

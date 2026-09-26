@@ -1,16 +1,16 @@
-"""Server MCP (Model Context Protocol), configurati come in Claude Code: GitHub, database, browser…
+"""MCP (Model Context Protocol) servers, configured as in Claude Code: GitHub, databases, browsers…
 
     {"mcpServers": {
         "github": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-github"],
                    "env": {"GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"}},
-        "docs": {"type": "http", "url": "https://esempio.com/mcp", "headers": {"Authorization": "Bearer ${TOKEN}"}}}}
+        "docs": {"type": "http", "url": "https://example.com/mcp", "headers": {"Authorization": "Bearer ${TOKEN}"}}}}
 
-Dove: `.mcp.json` del progetto (solo dopo il tuo sì, come gli hook), `~/.claude.json` (i server che usi con
-Claude Code, anche quelli del singolo progetto), `~/.mydevagent/mcp.json` e i plugin (`.mcp.json`).
+Where: the project's `.mcp.json` (only after your OK, like hooks), `~/.claude.json` (the servers you use with
+Claude Code, including per-project ones), `~/.mydevagent/mcp.json` and plugins (`.mcp.json`).
 
-Client minimo JSON-RPC su stdio e su HTTP ("streamable HTTP", risposte JSON o SSE). All'agente arriva un
-solo tool, `mcp`: senza `tool` elenca gli strumenti di un server con i loro argomenti, con `tool` lo usa.
-Così anche con server da 50 strumenti il prompt resta piccolo per i modelli locali.
+Minimal JSON-RPC client over stdio and HTTP ("streamable HTTP", JSON or SSE responses). The agent gets a
+single tool, `mcp`: without `tool` it lists a server's tools with their arguments, with `tool` it uses one.
+That way the prompt stays small for local models even with 50-tool servers.
 """
 
 from __future__ import annotations
@@ -45,8 +45,8 @@ class McpError(RuntimeError):
 class ServerConfig:
     name: str
     config: dict[str, Any]
-    source: str  # progetto · claude code · utente · plugin X
-    project: bool = False  # definito dentro il progetto: serve il tuo sì
+    source: str  # project · claude code · user · plugin X
+    project: bool = False  # defined inside the project: needs your OK
     plugin_root: Path | None = None
 
     @property
@@ -59,7 +59,7 @@ class ServerConfig:
         return str(self.config.get("url", ""))
 
 
-# ------------------------------------------------------------------ configurazione
+# ------------------------------------------------------------------ configuration
 def _json(path: Path) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -69,7 +69,7 @@ def _json(path: Path) -> dict:
 
 
 def expand(value: Any, extra: dict[str, str] | None = None) -> Any:
-    """`${VAR}` e `${VAR:-predefinito}` come in Claude Code, anche dentro liste e dizionari."""
+    """`${VAR}` and `${VAR:-default}` as in Claude Code, also inside lists and dicts."""
     env = {**os.environ, **(extra or {})}
     if isinstance(value, str):
         return ENV_RE.sub(lambda m: env.get(m[1]) or (m[2] or ""), value)
@@ -81,7 +81,7 @@ def expand(value: Any, extra: dict[str, str] | None = None) -> Any:
 
 
 def _servers(data: dict, flat: bool = False) -> dict[str, dict]:
-    """La sezione mcpServers; con `flat` anche i server scritti direttamente (come in alcuni plugin)."""
+    """The mcpServers section; with `flat` also servers written directly (as in some plugins)."""
     servers = data.get("mcpServers", data if flat else {})
     if not isinstance(servers, dict):
         return {}
@@ -89,20 +89,20 @@ def _servers(data: dict, flat: bool = False) -> dict[str, dict]:
 
 
 def server_configs(root: Path) -> dict[str, ServerConfig]:
-    """nome → configurazione. A parità di nome vince il primo: locale, progetto, utente, MyDevAgent, plugin."""
+    """name → configuration. On a name clash the first wins: local, project, user, MyDevAgent, plugins."""
     root = Path(root).resolve()
     claude = _json(Path.home() / ".claude.json")
     local = (claude.get("projects") or {}).get(str(root)) or {}
     state = Path(os.environ.get("MYDEVAGENT_STATE_DIR", Path.home() / ".mydevagent"))
     places = [(_servers(local), "claude code", False, None),
-              (_servers(_json(root / ".mcp.json")), "progetto", True, None),
+              (_servers(_json(root / ".mcp.json")), "project", True, None),
               (_servers(claude), "claude code", False, None),
-              (_servers(_json(state / "mcp.json")), "utente", False, None)]
+              (_servers(_json(state / "mcp.json")), "user", False, None)]
     for plugin in load_plugins(root).values():
         declared = plugin.manifest.get("mcpServers")
         data = _json(plugin.path / declared) if isinstance(declared, str) else declared or {}
         data = {**_servers(_json(plugin.path / ".mcp.json"), flat=True), **_servers(data, flat=True)}
-        places.append((data, f"plugin {plugin.name}", plugin.source == "progetto", plugin.path))
+        places.append((data, f"plugin {plugin.name}", plugin.source == "project", plugin.path))
     found: dict[str, ServerConfig] = {}
     for servers, source, project, plugin_root in places:
         for name, config in servers.items():
@@ -123,12 +123,12 @@ def allow(root: Path) -> None:
     trust.trust(root, "mcp", _items(server_configs(root)))
 
 
-# ------------------------------------------------------------------ trasporti
+# ------------------------------------------------------------------ transports
 class StdioTransport:
-    """Un processo che parla JSON-RPC, un messaggio per riga, su stdin/stdout."""
+    """A process that speaks JSON-RPC, one message per line, over stdin/stdout."""
 
     def __init__(self, command: list[str], env: dict[str, str], cwd: Path) -> None:
-        exe = shutil.which(command[0]) or command[0]  # su Windows trova npx.cmd, uvx.exe…
+        exe = shutil.which(command[0]) or command[0]  # on Windows this finds npx.cmd, uvx.exe…
         self.proc = subprocess.Popen([exe, *command[1:]], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE, cwd=cwd, env={**os.environ, **env}, text=True,
                                      encoding="utf-8", errors="replace", bufsize=1)
@@ -143,10 +143,10 @@ class StdioTransport:
             try:
                 msg = json.loads(line)
             except ValueError:
-                continue  # righe di log su stdout: le ignoro
+                continue  # log lines on stdout: ignore them
             if not isinstance(msg, dict):
                 continue
-            if "method" in msg and "id" in msg:  # richieste del server (ping, sampling…)
+            if "method" in msg and "id" in msg:  # requests from the server (ping, sampling…)
                 reply = {"result": {}} if msg["method"] == "ping" else {
                     "error": {"code": -32601, "message": "method not supported by MyDevAgent"}}
                 self.send({"jsonrpc": "2.0", "id": msg["id"], **reply})
@@ -162,7 +162,7 @@ class StdioTransport:
             self.proc.stdin.write(json.dumps(message) + "\n")
             self.proc.stdin.flush()
         except (OSError, ValueError) as exc:
-            raise McpError(f"il server si è chiuso: {self.last_error()}") from exc
+            raise McpError(f"the server closed: {self.last_error()}") from exc
 
     def request(self, message: dict, timeout: float) -> dict:
         self.send(message)
@@ -171,8 +171,8 @@ class StdioTransport:
                                       timeout)
             if message["id"] in self.pending:
                 return self.pending.pop(message["id"])
-        raise McpError(f"nessuna risposta dopo {timeout:.0f}s" if not done else
-                       f"il server si è chiuso: {self.last_error()}")
+        raise McpError(f"no response after {timeout:.0f}s" if not done else
+                       f"the server closed: {self.last_error()}")
 
     def last_error(self) -> str:
         return " ".join(line.strip() for line in list(self.stderr)[-3:]) or f"exit {self.proc.poll()}"
@@ -187,7 +187,7 @@ class StdioTransport:
 
 
 class HttpTransport:
-    """Streamable HTTP: POST di JSON-RPC, risposta JSON oppure eventi SSE."""
+    """Streamable HTTP: JSON-RPC POSTs, with a JSON response or SSE events."""
 
     def __init__(self, url: str, headers: dict[str, str], client: httpx.Client | None = None) -> None:
         self.url = url
@@ -209,7 +209,7 @@ class HttpTransport:
                         continue
                     if isinstance(msg, dict) and msg.get("id") == message["id"]:
                         return msg
-            raise McpError("nessuna risposta nello stream SSE")
+            raise McpError("no response in the SSE stream")
         return response.json()
 
     def _post(self, message: dict, timeout: float = TIMEOUT) -> httpx.Response:
@@ -219,7 +219,7 @@ class HttpTransport:
         except httpx.HTTPError as exc:
             raise McpError(f"{type(exc).__name__}: {exc}") from exc
         if response.status_code == 401:
-            raise McpError("serve l'autenticazione: aggiungi il token negli headers della configurazione")
+            raise McpError("authentication required: add the token to the headers in the configuration")
         if response.status_code >= 400:
             raise McpError(f"HTTP {response.status_code}: {response.text[:200]}")
         self.session_id = response.headers.get("mcp-session-id", self.session_id)
@@ -248,7 +248,7 @@ class Server:
         return self.config.name
 
     def connect(self) -> None:
-        """Avvia (o contatta) il server e legge i suoi strumenti. Gli errori finiscono in `error`."""
+        """Starts (or contacts) the server and reads its tools. Errors end up in `error`."""
         with self.lock:
             if self.transport or self.error:
                 return
@@ -265,13 +265,13 @@ class Server:
         cfg = expand(self.config.config, extra)
         if self.config.kind == "stdio":
             if not cfg.get("command"):
-                raise McpError("manca `command`")
+                raise McpError("`command` is missing")
             self.transport = StdioTransport([str(cfg["command"]), *map(str, cfg.get("args", []))],
                                             {k: str(v) for k, v in (cfg.get("env") or {}).items()}, self.root)
         elif self.config.kind == "http":
             self.transport = HttpTransport(str(cfg["url"]), {k: str(v) for k, v in (cfg.get("headers") or {}).items()})
-        else:  # ponytail: il vecchio trasporto "sse" e l'OAuth non ci sono; li aggiungeremo se servono
-            raise McpError(f"trasporto «{self.config.kind}» non ancora supportato (usa stdio o http)")
+        else:  # ponytail: the old "sse" transport and OAuth are not here; we'll add them if needed
+            raise McpError(f"transport \"{self.config.kind}\" not supported yet (use stdio or http)")
         info = self._call("initialize", {"protocolVersion": PROTOCOL_VERSION, "capabilities": {},
                                          "clientInfo": {"name": "mydevagent", "version": "1"}})
         self.instructions = str(info.get("instructions") or "")
@@ -287,7 +287,7 @@ class Server:
 
     def _call(self, method: str, params: dict, timeout: float = TIMEOUT) -> dict:
         if not self.transport:
-            raise McpError(self.error or "non connesso")
+            raise McpError(self.error or "not connected")
         reply = self.transport.request({"jsonrpc": "2.0", "id": next(self.ids), "method": method,
                                         "params": params}, timeout)
         if "error" in reply:
@@ -308,12 +308,12 @@ class Server:
                 parts.append(str(item.get("text", "")))
             elif kind == "resource":
                 resource = item.get("resource") or {}
-                parts.append(str(resource.get("text") or f"[risorsa {resource.get('uri', '')}]"))
+                parts.append(str(resource.get("text") or f"[resource {resource.get('uri', '')}]"))
             else:
                 parts.append(f"[{kind}]")
         if not parts and result.get("structuredContent") is not None:
             parts.append(json.dumps(result["structuredContent"], ensure_ascii=False))
-        text = "\n".join(parts) or "(nessun risultato)"
+        text = "\n".join(parts) or "(no result)"
         return f"ERROR: {text}" if result.get("isError") else text
 
     def close(self) -> None:
@@ -323,7 +323,7 @@ class Server:
 
 
 class McpManager:
-    """I server del progetto: si avviano alla prima richiesta (o in background all'avvio della TUI)."""
+    """The project's servers: they start on the first request (or in the background when the TUI starts)."""
 
     def __init__(self, root: Path, configs: dict[str, ServerConfig] | None = None) -> None:
         self.root = Path(root).resolve()
@@ -344,7 +344,7 @@ class McpManager:
             t.join()
 
     def prompt(self) -> str:
-        """L'elenco per il system prompt: server e nomi degli strumenti (gli argomenti si chiedono col tool)."""
+        """The list for the system prompt: servers and tool names (arguments are requested with the tool)."""
         if not self.servers:
             return ""
         lines = []

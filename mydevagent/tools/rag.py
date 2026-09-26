@@ -1,7 +1,7 @@
-"""Indice RAG locale della codebase: embeddings via /v1/embeddings (es. nomic-embed-text su Ollama).
+"""Local RAG index of the codebase: embeddings via /v1/embeddings (e.g. nomic-embed-text on Ollama).
 
-Store in puro Python (JSON) → zero dipendenze extra. Se gli embeddings non sono disponibili si usa un
-fallback lessicale (BM25 semplificato), così il RAG funziona sempre, anche senza modello di embedding.
+Pure-Python store (JSON) → zero extra dependencies. If embeddings are not available a lexical
+fallback (simplified BM25) is used, so RAG always works, even without an embedding model.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ def _tokens(text: str) -> list[str]:
     for tok in TOKEN_RE.findall(text):
         low = tok.lower()
         out.append(low)
-        # spezza camelCase e snake_case per migliorare il matching
+        # split camelCase and snake_case to improve matching
         parts = re.findall(r"[a-z]+|[A-Z][a-z]*|\d+", tok)
         if len(parts) > 1:
             out.extend(p.lower() for p in parts if len(p) > 1)
@@ -106,7 +106,7 @@ class CodeIndex:
                     texts = [f"{c.header()}\n{c.text}" for c in self.chunks[i : i + batch]]
                     self.vectors.extend(self.llm.embed(texts))
             except Exception:
-                self.vectors = []  # fallback lessicale
+                self.vectors = []  # lexical fallback
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.path.write_text(json.dumps({"chunks": [asdict(c) for c in self.chunks], "vectors": self.vectors}),
                              encoding="utf-8")

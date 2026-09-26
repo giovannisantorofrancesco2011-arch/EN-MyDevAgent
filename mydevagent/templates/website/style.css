@@ -1,16 +1,16 @@
 :root {
-  --sfondo: #faf7ff;
-  --testo: #1f1633;
-  --accento: #a855f7;
+  --background: #faf7ff;
+  --text: #1f1633;
+  --accent: #a855f7;
   --card: #ffffff;
-  --bordo: #e9d5ff;
+  --border: #e9d5ff;
 }
 
-body.scuro {
-  --sfondo: #140c28;
-  --testo: #f3e8ff;
+body.dark {
+  --background: #140c28;
+  --text: #f3e8ff;
   --card: #21163d;
-  --bordo: #3b2a63;
+  --border: #3b2a63;
 }
 
 * { box-sizing: border-box; }
@@ -18,8 +18,8 @@ body.scuro {
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  background: var(--sfondo);
-  color: var(--testo);
+  background: var(--background);
+  color: var(--text);
   line-height: 1.6;
   transition: background 0.3s, color 0.3s;
 }
@@ -29,14 +29,14 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 1rem 2rem;
-  border-bottom: 1px solid var(--bordo);
+  border-bottom: 1px solid var(--border);
 }
 
-.logo { font-weight: 700; color: var(--accento); }
+.logo { font-weight: 700; color: var(--accent); }
 
 nav { display: flex; gap: 1rem; align-items: center; }
-nav a { color: var(--testo); text-decoration: none; }
-nav a:hover { color: var(--accento); }
+nav a { color: var(--text); text-decoration: none; }
+nav a:hover { color: var(--accent); }
 
 main { max-width: 960px; margin: 0 auto; padding: 0 1.5rem; }
 
@@ -49,13 +49,13 @@ button {
   border: none;
   border-radius: 999px;
   padding: 0.6rem 1.4rem;
-  background: var(--accento);
+  background: var(--accent);
   color: #fff;
 }
 button:hover { filter: brightness(1.1); }
-#tema { padding: 0.3rem 0.7rem; background: transparent; font-size: 1.2rem; }
+#theme { padding: 0.3rem 0.7rem; background: transparent; font-size: 1.2rem; }
 
-.nota { opacity: 0.7; font-size: 0.9rem; }
+.note { opacity: 0.7; font-size: 0.9rem; }
 
 .cards {
   display: grid;
@@ -65,10 +65,10 @@ button:hover { filter: brightness(1.1); }
 
 .card {
   background: var(--card);
-  border: 1px solid var(--bordo);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 1.2rem;
 }
-.card h3 { margin-top: 0; color: var(--accento); }
+.card h3 { margin-top: 0; color: var(--accent); }
 
 footer { text-align: center; padding: 2rem; opacity: 0.7; }

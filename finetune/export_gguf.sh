@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Esporta il modello fine-tuned in GGUF (se non già fatto) e lo registra in Ollama come "mydevagent-custom".
+# Exports the fine-tuned model to GGUF (if not done already) and registers it in Ollama as "mydevagent-custom".
 #   bash finetune/export_gguf.sh [config]
 set -euo pipefail
 CONFIG="${1:-finetune/config_qlora.yaml}"
@@ -11,7 +11,7 @@ PY
 )
 
 if ! ls "$GGUF_DIR"/*.gguf >/dev/null 2>&1; then
-  echo "==> merge LoRA + quantizzazione $QUANT con Unsloth"
+  echo "==> merge LoRA + $QUANT quantization with Unsloth"
   python3 - "$OUT/adapter" "$GGUF_DIR" "$QUANT" <<'PY'
 import sys
 from unsloth import FastLanguageModel
@@ -32,7 +32,7 @@ $SYSTEM
 MF
 ollama create "$NAME" -f "$GGUF_DIR/Modelfile"
 cat <<MSG
-Fatto! Prova:   ollama run $NAME
-Per usarlo nel team a 15 agenti:   MYDEVAGENT_MODEL_MAIN=$NAME mydevagent chat
-(oppure imposta  main: "$NAME"  nel profilo in config/settings.yaml)
+Done! Try:   ollama run $NAME
+To use it in the 15-agent team:   MYDEVAGENT_MODEL_MAIN=$NAME mydevagent chat
+(or set  main: "$NAME"  in the profile in config/settings.yaml)
 MSG

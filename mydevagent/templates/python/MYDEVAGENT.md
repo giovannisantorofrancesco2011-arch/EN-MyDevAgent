@@ -1,11 +1,11 @@
-# Il mio programma
+# My program
 
-Programma Python con i test.
+Python program with tests.
 
-## Comandi
-- avvio: `python main.py`
+## Commands
+- run: `python main.py`
 - test: `python -m pytest -q`
 
-## Convenzioni
-- funzioni piccole con un nome che dice cosa fanno, e un test per ognuna in test_main.py
-- nomi e commenti in italiano
+## Conventions
+- small functions with a name that says what they do, and a test for each one in test_main.py
+- names and comments in English

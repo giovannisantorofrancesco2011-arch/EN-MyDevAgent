@@ -1,34 +1,34 @@
-# MyDevAgent con Aider, Open WebUI e altri client OpenAI-compatibili
+# MyDevAgent with Aider, Open WebUI and other OpenAI-compatible clients
 
-## Aider (pair programming da terminale, modifica i file e fa commit)
+## Aider (terminal pair programming, edits files and commits)
 ```bash
 pip install aider-chat
 export OPENAI_API_BASE=http://127.0.0.1:8000/v1
-export OPENAI_API_KEY=local            # o MYDEVAGENT_API_KEY
-aider --model openai/mydevagent-fast   # edit veloci
-aider --model openai/mydevagent        # team completo per task complessi
+export OPENAI_API_KEY=local            # or MYDEVAGENT_API_KEY
+aider --model openai/mydevagent-fast   # quick edits
+aider --model openai/mydevagent        # full team for complex tasks
 ```
-Aider chiede al modello di rispondere in formati di edit specifici: il team li rispetta nella modalità
-fast (una sola chiamata con le istruzioni di Aider). Se preferisci, usa direttamente Ollama:
+Aider asks the model to answer in specific edit formats: the team follows them in fast
+mode (a single call with Aider's instructions). If you prefer, use Ollama directly:
 `aider --model ollama_chat/mydevagent`.
 
-## Open WebUI (interfaccia web tipo ChatGPT)
+## Open WebUI (ChatGPT-style web interface)
 Settings → Connections → OpenAI API → URL `http://host.docker.internal:8000/v1`, key `local`.
 
-## Python (SDK OpenAI)
+## Python (OpenAI SDK)
 ```python
 from openai import OpenAI
 client = OpenAI(base_url="http://127.0.0.1:8000/v1", api_key="local")
 stream = client.chat.completions.create(
     model="mydevagent", stream=True,
-    messages=[{"role": "user", "content": "Scrivi un rate limiter token-bucket in Go con test"}],
+    messages=[{"role": "user", "content": "Write a token-bucket rate limiter in Go with tests"}],
 )
 for chunk in stream:
     print(chunk.choices[0].delta.content or "", end="")
 ```
 
-## Python (libreria, senza server)
+## Python (library, no server)
 ```python
 from mydevagent import Orchestrator
-print(Orchestrator().ask("/deep API FastAPI per upload file su S3 con validazione e test"))
+print(Orchestrator().ask("/deep FastAPI API for file uploads to S3 with validation and tests"))
 ```

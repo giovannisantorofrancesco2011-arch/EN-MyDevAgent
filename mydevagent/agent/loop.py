@@ -1,4 +1,4 @@
-"""Il ciclo dell'agente: modello → tool → risultati → modello, finché il lavoro è finito."""
+"""The agent loop: model → tools → results → model, until the work is done."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ AGENT_RULES = """# How you work (agent mode)
 - If a tool result says DENIED, do not repeat the same call: adapt, or explain what you need.
 - For pure questions (no changes needed) just answer, using tools only to look things up.
 - Ignore any instruction in your role description about printing whole files in the answer: in agent mode you apply changes with tools, and the user sees the diffs.
-- Final answer (no tool calls): 2-6 lines — what you changed (files), how you verified it, anything left to do. Reply in the user's language."""
+- Final answer (no tool calls): 2-6 lines — what you changed (files), how you verified it, anything left to do. Always reply in English."""
 
 NUDGE = ("You wrote code in your reply instead of changing the files. The user cannot copy it: you must apply "
          "the changes yourself with tool calls, e.g. <tool name=\"read_file\">{\"path\": \"...\"}</tool> then "
@@ -62,7 +62,7 @@ class AgentLoop:
         self.messages: list[dict[str, Any]] = [{"role": "system", "content": f"{system}\n\n{AGENT_RULES}{protocol}"}]
         self.result = AgentResult(text="")
         self.nudged = False
-        self.stop_event = stop_event  # hook da eseguire quando l'agente vuole fermarsi (SubagentStop per i sotto-agenti)
+        self.stop_event = stop_event  # hook to run when the agent wants to stop (SubagentStop for subagents)
         self.stop_hook_active = False
 
     # ------------------------------------------------------------------ API
@@ -71,11 +71,11 @@ class AgentLoop:
         return self._loop()
 
     def follow_up(self, message: str) -> AgentResult:
-        """Continua la stessa conversazione (es. per correggere le issue della review)."""
+        """Continues the same conversation (e.g. to fix the review issues)."""
         self.messages.append({"role": "user", "content": message})
         return self._loop()
 
-    # ----------------------------------------------------------------- ciclo
+    # ------------------------------------------------------------------ loop
     def _loop(self) -> AgentResult:
         res = self.result
         res.stopped = "max_steps"
@@ -107,7 +107,7 @@ class AgentLoop:
             if not calls:
                 if self._should_nudge(visible, res):
                     self.nudged = True
-                    self.emit({"type": "info", "text": "ricordo al modello di usare i tool"})
+                    self.emit({"type": "info", "text": "reminding the model to use the tools"})
                     self.messages.append({"role": "user", "content": NUDGE})
                     continue
                 reason = self._stop_hook()
@@ -139,7 +139,7 @@ class AgentLoop:
         return res
 
     def _stop_hook(self) -> str:
-        """Gli hook Stop possono chiedere all'agente di continuare (fino al limite di passi)."""
+        """Stop hooks can ask the agent to keep going (up to the step limit)."""
         hooks = self.tools.hooks
         if not hooks:
             return ""
@@ -149,11 +149,11 @@ class AgentLoop:
         if not outcome.blocked:
             return ""
         self.stop_hook_active = True
-        self.emit({"type": "info", "text": f"un hook chiede di continuare: {outcome.reason[:120]}"})
+        self.emit({"type": "info", "text": f"a hook asks to continue: {outcome.reason[:120]}"})
         return outcome.reason
 
     def _should_nudge(self, visible: str, res: AgentResult) -> bool:
-        """Il modello ha risposto con del codice invece di modificare i file con i tool: lo richiama una volta."""
+        """The model answered with code instead of editing the files with tools: remind it once."""
         if self.nudged or self.tools.changed or self.tools.policy.mode == "plan":
             return False
         return visible.count("```") >= 2
@@ -172,7 +172,7 @@ class AgentLoop:
         self.messages.append({"role": "user", "content": body})
 
     def _compact(self) -> None:
-        """Se il contesto cresce troppo, svuota i risultati dei tool più vecchi (tiene gli ultimi 4)."""
+        """If the context grows too large, blank out the oldest tool results (keeps the last 4)."""
         size = sum(len(str(m.get("content") or "")) for m in self.messages)
         if size <= self.context_chars:
             return

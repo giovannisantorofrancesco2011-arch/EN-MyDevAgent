@@ -1,4 +1,4 @@
-"""Tasto Esc durante il lavoro dell'agente (quando prompt_toolkit non sta leggendo l'input)."""
+"""Esc key while the agent is working (when prompt_toolkit is not reading input)."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ import sys
 
 
 class EscWatcher:
-    """Legge la tastiera senza bloccare: `pressed()` è True se l'utente ha premuto Esc.
+    """Reads the keyboard without blocking: `pressed()` is True if the user pressed Esc.
 
-    POSIX: modalità cbreak (Ctrl+C continua a funzionare). Windows: msvcrt. Se stdin non è un
-    terminale (pipe, test) non fa nulla.
+    POSIX: cbreak mode (Ctrl+C keeps working). Windows: msvcrt. If stdin is not a
+    terminal (pipe, tests) it does nothing.
     """
 
     def __init__(self) -> None:
@@ -56,7 +56,7 @@ class EscWatcher:
                 data = os.read(sys.stdin.fileno(), 64)
                 if not data:
                     break
-                # Esc da solo (le frecce inviano Esc + "[" … e vanno ignorate)
+                # Esc alone (arrow keys send Esc + "[" … and must be ignored)
                 if data == b"\x1b" or (data.startswith(b"\x1b") and not data.startswith((b"\x1b[", b"\x1bO"))):
                     hit = True
             return hit

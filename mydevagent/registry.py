@@ -1,4 +1,4 @@
-"""Registro dei 15 agenti: carica config/agents.yaml e i prompt associati."""
+"""Registry of the 15 agents: loads config/agents.yaml and the associated prompts."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ import yaml
 
 from .config import Settings
 
-EXPECTED_AGENT_COUNT = 15  # nucleo: fast / balanced / deep
-EXPECTED_ULTRA_COUNT = 20  # estesi: solo /ultra-deep (totale 35)
+EXPECTED_AGENT_COUNT = 15  # core: fast / balanced / deep
+EXPECTED_ULTRA_COUNT = 20  # extended: /ultra-deep only (35 total)
 STAGES = ("research", "plan", "specialist", "test", "gate", "docs", "final", "judge")
 SECTIONS = (
     "request",
@@ -76,7 +76,7 @@ class AgentRegistry:
         return [a for a in self if a.group == "ultra"]
 
     def resolve(self, name: str) -> str | None:
-        """Alias o chiave → chiave agente (None se sconosciuto)."""
+        """Alias or key → agent key (None if unknown)."""
         return self.by_alias.get(name.lower().lstrip("@"))
 
 
@@ -86,7 +86,7 @@ def _load_agents(path: Path, prompts_dir: Path, group: str) -> list[Agent]:
     for raw in data.get("agents", []):
         prompt_path = prompts_dir / "agents" / raw["prompt"]
         if not prompt_path.is_file():
-            raise FileNotFoundError(f"Prompt mancante per l'agente {raw['key']}: {prompt_path}")
+            raise FileNotFoundError(f"Missing prompt for agent {raw['key']}: {prompt_path}")
         agent = Agent(
             id=int(raw["id"]),
             key=raw["key"],
@@ -120,30 +120,30 @@ def load_registry(settings: Settings, *, strict: bool = True) -> AgentRegistry:
     agents: dict[str, Agent] = {}
     for agent in core + ultra:
         if agent.key in agents:
-            raise ValueError(f"Chiave agente duplicata: {agent.key}")
+            raise ValueError(f"Duplicate agent key: {agent.key}")
         agents[agent.key] = agent
 
     if strict:
         if len(core) != EXPECTED_AGENT_COUNT:
-            raise ValueError(f"MyDevAgent richiede esattamente {EXPECTED_AGENT_COUNT} agenti nel nucleo, "
-                             f"trovati {len(core)}")
+            raise ValueError(f"MyDevAgent requires exactly {EXPECTED_AGENT_COUNT} core agents, "
+                             f"found {len(core)}")
         for stage in ("plan", "specialist", "test", "gate", "final"):
             if not any(a.stage == stage for a in core):
-                raise ValueError(f"Nessun agente con stage '{stage}'")
+                raise ValueError(f"No agent with stage '{stage}'")
         if sorted(a.id for a in core) != list(range(1, EXPECTED_AGENT_COUNT + 1)):
-            raise ValueError("Gli id degli agenti del nucleo devono essere 1..15 senza buchi")
+            raise ValueError("Core agent ids must be 1..15 with no gaps")
         if ultra:
             total = EXPECTED_AGENT_COUNT + EXPECTED_ULTRA_COUNT
             if len(ultra) != EXPECTED_ULTRA_COUNT or sorted(a.id for a in ultra) != list(
                     range(EXPECTED_AGENT_COUNT + 1, total + 1)):
-                raise ValueError(f"agents_ultra.yaml deve contenere esattamente {EXPECTED_ULTRA_COUNT} agenti "
-                                 f"con id 16..{total}")
+                raise ValueError(f"agents_ultra.yaml must contain exactly {EXPECTED_ULTRA_COUNT} agents "
+                                 f"with ids 16..{total}")
     return AgentRegistry(agents=agents, persona=persona)
 
 
 def _validate(agent: Agent) -> None:
     if agent.stage not in STAGES:
-        raise ValueError(f"{agent.key}: stage '{agent.stage}' non valido ({STAGES})")
+        raise ValueError(f"{agent.key}: invalid stage '{agent.stage}' ({STAGES})")
     unknown = set(agent.reads) - set(SECTIONS)
     if unknown:
-        raise ValueError(f"{agent.key}: sezioni sconosciute in 'reads': {sorted(unknown)}")
+        raise ValueError(f"{agent.key}: unknown sections in 'reads': {sorted(unknown)}")

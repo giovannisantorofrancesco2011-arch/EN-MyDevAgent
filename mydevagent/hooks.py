@@ -1,16 +1,16 @@
-"""Hook nel formato di Claude Code: comandi che partono da soli a certi momenti del lavoro dell'agente.
+"""Hooks in the Claude Code format: commands that run on their own at certain moments of the agent's work.
 
     {"hooks": {"PostToolUse": [{"matcher": "Edit|Write",
                                 "hooks": [{"type": "command", "command": "ruff format ."}]}]}}
 
-Dove: `~/.claude/settings.json`, `~/.mydevagent/settings.json`, i plugin (`hooks/hooks.json`) e, solo dopo
-che hai detto sì una volta, quelli del progetto (`.claude/settings.json`, `.claude/settings.local.json`,
-`.mydevagent/settings.json`, plugin in `.mydevagent/plugins`): un repository scaricato non può eseguire
-comandi sul tuo PC senza chiedertelo.
+Where: `~/.claude/settings.json`, `~/.mydevagent/settings.json`, plugins (`hooks/hooks.json`) and, only after
+you have said yes once, the project's (`.claude/settings.json`, `.claude/settings.local.json`,
+`.mydevagent/settings.json`, plugins in `.mydevagent/plugins`): a downloaded repository cannot run
+commands on your PC without asking you.
 
-Eventi: PreToolUse (può bloccare un tool), PostToolUse, UserPromptSubmit (può bloccare la richiesta o
-aggiungere contesto), Stop (può chiedere all'agente di continuare), SessionStart (aggiunge contesto),
-SubagentStop. Il comando riceve il JSON dell'evento su stdin; exit code 2 = blocca, e stderr spiega perché.
+Events: PreToolUse (can block a tool), PostToolUse, UserPromptSubmit (can block the request or
+add context), Stop (can ask the agent to keep going), SessionStart (adds context),
+SubagentStop. The command receives the event JSON on stdin; exit code 2 = block, and stderr explains why.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from .plugins import load_plugins
 
 EVENTS = ("PreToolUse", "PostToolUse", "UserPromptSubmit", "Stop", "SubagentStop", "SessionStart")
 TOOL_EVENTS = ("PreToolUse", "PostToolUse")
-# i nomi dei tool di Claude Code, così i matcher dei plugin ("Edit|Write", "Bash") funzionano anche qui
+# Claude Code's tool names, so plugin matchers ("Edit|Write", "Bash") work here too
 CLAUDE_NAMES = {"bash": "Bash", "run_tests": "Bash", "edit_file": "Edit", "write_file": "Write",
                 "read_file": "Read", "grep": "Grep", "list_files": "Glob", "web_search": "WebSearch",
                 "todo_write": "TodoWrite", "skill": "Skill", "task": "Task",
@@ -44,10 +44,10 @@ class Hook:
     matcher: str
     command: str
     timeout: int = 60
-    source: str = ""  # da dove viene: claude code · utente · progetto · plugin X
-    project: bool = False  # definito dentro il progetto: serve il tuo consenso
+    source: str = ""  # where it comes from: claude code · user · project · plugin X
+    project: bool = False  # defined inside the project: needs your consent
     plugin_root: Path | None = None
-    unsupported: str = ""  # perché MyDevAgent non lo esegue (resta visibile in /hooks)
+    unsupported: str = ""  # why MyDevAgent doesn't run it (still visible in /hooks)
 
     def matches(self, target: str, *names: str) -> bool:
         if self.matcher in ("", "*"):
@@ -58,9 +58,9 @@ class Hook:
 @dataclass
 class Outcome:
     blocked: bool = False
-    reason: str = ""  # per il modello (per UserPromptSubmit: per te)
-    context: str = ""  # contesto in più per il modello
-    notes: list[str] = field(default_factory=list)  # da mostrare a te: errori, systemMessage
+    reason: str = ""  # for the model (for UserPromptSubmit: for you)
+    context: str = ""  # extra context for the model
+    notes: list[str] = field(default_factory=list)  # to show you: errors, systemMessage
 
     def add(self, attr: str, text: str) -> None:
         text = text.strip()
@@ -68,7 +68,7 @@ class Outcome:
             setattr(self, attr, (getattr(self, attr) + "\n" + text).strip())
 
 
-# ------------------------------------------------------------------ caricamento
+# ---------------------------------------------------------------------- loading
 def _json(path: Path) -> dict:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -82,18 +82,18 @@ def parse(config: dict, source: str, project: bool = False, plugin_root: Path | 
     for event, groups in (config.get("hooks") or {}).items():
         for group in groups if isinstance(groups, list) else []:
             for spec in group.get("hooks", []) if isinstance(group, dict) else []:
-                # ponytail: solo gli hook "command"; quelli "prompt" (valutati da un LLM) vengono ignorati
+                # ponytail: only "command" hooks; "prompt" ones (evaluated by an LLM) are ignored
                 if isinstance(spec, dict) and spec.get("type", "command") == "command" and spec.get("command"):
                     skip = [k for k in ("if", "async", "asyncRewake") if spec.get(k)]
-                    unsupported = ("non ancora supportati: " + ", ".join(skip)) if skip else (
-                        "" if event in EVENTS else "evento non ancora supportato")
+                    unsupported = ("not supported yet: " + ", ".join(skip)) if skip else (
+                        "" if event in EVENTS else "event not supported yet")
                     out.append(Hook(event, str(group.get("matcher") or ""), str(spec["command"]),
                                     int(spec.get("timeout") or 60), source, project, plugin_root, unsupported))
     return out
 
 
 def _plugin_configs(plugin) -> list[dict]:
-    """hooks/hooks.json più il campo "hooks" del plugin.json (un percorso, una lista o gli hook stessi)."""
+    """hooks/hooks.json plus the "hooks" field of plugin.json (a path, a list or the hooks themselves)."""
     declared = plugin.manifest.get("hooks")
     items = declared if isinstance(declared, list) else [declared] if declared else []
     default = plugin.path / "hooks" / "hooks.json"
@@ -107,21 +107,21 @@ def _plugin_configs(plugin) -> list[dict]:
 
 
 def all_hooks(root: Path) -> list[Hook]:
-    """Tutti gli hook trovati, compresi quelli del progetto non ancora autorizzati."""
+    """All the hooks found, including the project's not yet authorized ones."""
     root = Path(root)
     state = Path(os.environ.get("MYDEVAGENT_STATE_DIR", Path.home() / ".mydevagent"))
     settings = [(Path.home() / ".claude" / "settings.json", "claude code", False),
-                (state / "settings.json", "utente", False),
-                (root / ".claude" / "settings.json", "progetto", True),
-                (root / ".claude" / "settings.local.json", "progetto", True),
-                (root / ".mydevagent" / "settings.json", "progetto", True)]
+                (state / "settings.json", "user", False),
+                (root / ".claude" / "settings.json", "project", True),
+                (root / ".claude" / "settings.local.json", "project", True),
+                (root / ".mydevagent" / "settings.json", "project", True)]
     configs = [(_json(path), source, project) for path, source, project in settings]
     if any(c.get("disableAllHooks") for c, _, _ in configs):
         return []
     hooks = [h for config, source, project in configs for h in parse(config, source, project)]
     for plugin in load_plugins(root).values():
         for config in _plugin_configs(plugin):
-            hooks += parse(config, f"plugin {plugin.name}", plugin.source == "progetto", plugin.path)
+            hooks += parse(config, f"plugin {plugin.name}", plugin.source == "project", plugin.path)
     return hooks
 
 
@@ -130,7 +130,7 @@ def _items(hooks: list[Hook]) -> list[str]:
 
 
 def untrusted(root: Path) -> list[Hook]:
-    """Gli hook del progetto che aspettano il tuo sì (di nuovo, se sono cambiati da allora)."""
+    """The project's hooks waiting for your OK (again, if they changed since then)."""
     found = all_hooks(root)
     return [] if trust.is_trusted(root, "hooks", _items(found)) else [h for h in found if h.project]
 
@@ -140,14 +140,14 @@ def allow(root: Path) -> None:
 
 
 def load_hooks(root: Path) -> list[Hook]:
-    """Gli hook attivi: quelli del progetto solo se li hai autorizzati."""
+    """The active hooks: the project's only if you authorized them."""
     pending = untrusted(root)
     return [h for h in all_hooks(root) if not (h.project and pending)]
 
 
-# -------------------------------------------------------------------- esecuzione
+# -------------------------------------------------------------------- execution
 def _shell(command: str) -> list[str] | str:
-    """Su Windows gli hook dei plugin sono scritti per bash: usa quello di Git se c'è (come Claude Code)."""
+    """On Windows plugin hooks are written for bash: use Git's bash if present (like Claude Code)."""
     if sys.platform != "win32":
         return command
     git = shutil.which("git")
@@ -161,7 +161,7 @@ class Hooks:
         self.hooks = load_hooks(self.root) if hooks is None else hooks
         self.session_id = session_id or uuid.uuid4().hex
         self.mode = "default"
-        self.session_context = ""  # quello che gli hook SessionStart hanno aggiunto
+        self.session_context = ""  # what the SessionStart hooks added
 
     def start(self, source: str = "startup") -> Outcome:
         outcome = self.run("SessionStart", target=source, payload={"source": source})
@@ -172,7 +172,7 @@ class Hooks:
         return bool(self.hooks)
 
     def run(self, event: str, *, target: str = "", payload: dict[str, Any] | None = None) -> Outcome:
-        """Esegue gli hook dell'evento. `target` è il tool (o la fonte, per SessionStart) da confrontare col matcher."""
+        """Runs the event's hooks. `target` is the tool (or the source, for SessionStart) to match against the matcher."""
         outcome = Outcome()
         names = [CLAUDE_NAMES.get(target, "")] if event in TOOL_EVENTS else []
         data = {"session_id": self.session_id, "transcript_path": "", "cwd": str(self.root),
@@ -184,7 +184,7 @@ class Hooks:
 
     def tool_payload(self, tool: str, args: dict[str, Any]) -> dict[str, Any]:
         tool_input = dict(args)
-        if "path" in args:  # come Claude Code: percorso assoluto in file_path
+        if "path" in args:  # like Claude Code: absolute path in file_path
             tool_input["file_path"] = str((self.root / str(args["path"])).resolve())
         return {"tool_name": CLAUDE_NAMES.get(tool, tool), "tool_input": tool_input}
 
@@ -201,17 +201,17 @@ class Hooks:
                                   text=True, timeout=hook.timeout, cwd=self.root, env=env, encoding="utf-8",
                                   errors="replace")
         except subprocess.TimeoutExpired:
-            outcome.notes.append(f"hook «{label}» fermato dopo {hook.timeout}s")
+            outcome.notes.append(f"hook \"{label}\" stopped after {hook.timeout}s")
             return
         except OSError as exc:
-            outcome.notes.append(f"hook «{label}» non avviato: {exc}")
+            outcome.notes.append(f"hook \"{label}\" did not start: {exc}")
             return
         if proc.returncode == 2:
             outcome.blocked = True
-            outcome.add("reason", proc.stderr or f"bloccato da «{label}»")
+            outcome.add("reason", proc.stderr or f"blocked by \"{label}\"")
             return
         if proc.returncode != 0:
-            outcome.notes.append(f"hook «{label}» fallito (exit {proc.returncode}): {proc.stderr.strip()[:200]}")
+            outcome.notes.append(f"hook \"{label}\" failed (exit {proc.returncode}): {proc.stderr.strip()[:200]}")
             return
         out = proc.stdout.strip()
         try:
@@ -225,14 +225,14 @@ class Hooks:
         specific = result.get("hookSpecificOutput") or {}
         if result.get("continue") is False:
             outcome.blocked = True
-            outcome.add("reason", str(result.get("stopReason") or f"fermato da «{label}»"))
+            outcome.add("reason", str(result.get("stopReason") or f"stopped by \"{label}\""))
         if result.get("decision") == "block":
             outcome.blocked = True
-            outcome.add("reason", str(result.get("reason") or f"bloccato da «{label}»"))
-        # ponytail: "allow"/"ask" non scavalcano i permessi di MyDevAgent; conta solo "deny"
+            outcome.add("reason", str(result.get("reason") or f"blocked by \"{label}\""))
+        # ponytail: "allow"/"ask" don't override MyDevAgent's permissions; only "deny" counts
         if specific.get("permissionDecision") == "deny":
             outcome.blocked = True
-            outcome.add("reason", str(specific.get("permissionDecisionReason") or f"negato da «{label}»"))
+            outcome.add("reason", str(specific.get("permissionDecisionReason") or f"denied by \"{label}\""))
         outcome.add("context", str(specific.get("additionalContext") or ""))
         if result.get("systemMessage"):
             outcome.notes.append(str(result["systemMessage"]))

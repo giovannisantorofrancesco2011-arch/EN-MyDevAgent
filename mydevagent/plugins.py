@@ -1,11 +1,11 @@
-"""Plugin nel formato di Claude Code: una cartella con `.claude-plugin/plugin.json` e dentro `commands/`
-(comandi `/nome`), `skills/` (skill) e `agents/` (agenti specializzati, per MyDevAgent sono skill).
-`hooks/` (vedi hooks.py) e `.mcp.json`.
+"""Plugins in the Claude Code format: a folder with `.claude-plugin/plugin.json` and, inside, `commands/`
+(`/name` commands), `skills/` (skills) and `agents/` (specialized agents, which are subagents in MyDevAgent),
+`hooks/` (see hooks.py) and `.mcp.json`.
 
-Da dove arrivano: `.mydevagent/plugins/` del progetto, `~/.mydevagent/plugins/` (dove li mette
-`/plugin install`), i plugin installati in Claude Code (`~/.claude/plugins/installed_plugins.json`) e le
-cartelle in MYDEVAGENT_PLUGINS_DIRS. Un repository marketplace (`.claude-plugin/marketplace.json`) può
-contenere più plugin.
+Where they come from: the project's `.mydevagent/plugins/`, `~/.mydevagent/plugins/` (where
+`/plugin install` puts them), the plugins installed in Claude Code (`~/.claude/plugins/installed_plugins.json`)
+and the folders in MYDEVAGENT_PLUGINS_DIRS. A marketplace repository (`.claude-plugin/marketplace.json`) can
+contain several plugins.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ PATTERNS = {"commands": "**/*.md", "skills": "*/SKILL.md", "agents": "*.md"}
 class Plugin:
     name: str
     path: Path
-    source: str  # progetto · utente · claude code · extra
+    source: str  # project · user · claude code · extra
     manifest: dict = field(default_factory=dict)
 
     @property
@@ -39,7 +39,7 @@ class Plugin:
         return str(self.manifest.get("version") or "")
 
     def dirs(self, kind: str) -> list[Path]:
-        """La cartella standard più quelle indicate nel plugin.json (che si aggiungono, come in Claude Code)."""
+        """The standard folder plus those listed in plugin.json (they add up, as in Claude Code)."""
         extra = self.manifest.get(kind) or []
         extra = [extra] if isinstance(extra, str) else extra
         paths = [self.path / kind] + [(self.path / e).resolve() for e in extra if isinstance(e, str)]
@@ -74,7 +74,7 @@ def is_plugin(folder: Path) -> bool:
 
 
 def find_plugins(folder: Path, depth: int = 1) -> list[Path]:
-    """Un plugin, un marketplace con i suoi plugin locali, oppure una cartella che contiene plugin."""
+    """A plugin, a marketplace with its local plugins, or a folder that contains plugins."""
     if not folder.is_dir():
         return []
     if is_plugin(folder):
@@ -82,7 +82,7 @@ def find_plugins(folder: Path, depth: int = 1) -> list[Path]:
     market = _json(folder / ".claude-plugin" / "marketplace.json")
     if market:
         sources = [p.get("source") for p in market.get("plugins", []) if isinstance(p, dict)]
-        # ponytail: solo sorgenti locali ("./plugins/x"); quelle github/url si installano a parte con /plugin install
+        # ponytail: local sources only ("./plugins/x"); github/url ones are installed separately with /plugin install
         return [p for s in sources if isinstance(s, str) for p in [(folder / s).resolve()] if is_plugin(p)]
     if depth == 0:
         return []
@@ -91,7 +91,7 @@ def find_plugins(folder: Path, depth: int = 1) -> list[Path]:
 
 
 def claude_code_plugins() -> list[Path]:
-    """I plugin attivi installati in Claude Code (formato v1 e v2 di installed_plugins.json)."""
+    """The enabled plugins installed in Claude Code (v1 and v2 format of installed_plugins.json)."""
     base = Path.home() / ".claude"
     enabled = _json(base / "settings.json").get("enabledPlugins") or {}
     out = []
@@ -105,9 +105,9 @@ def claude_code_plugins() -> list[Path]:
 
 
 def load_plugins(root: Path) -> dict[str, Plugin]:
-    """nome → plugin. A parità di nome vince il primo: progetto, utente, Claude Code, cartelle extra."""
-    places = [(p, "progetto") for p in find_plugins(Path(root) / ".mydevagent" / "plugins")]
-    places += [(p, "utente") for p in find_plugins(state_plugins())]
+    """name → plugin. On a name clash the first wins: project, user, Claude Code, extra folders."""
+    places = [(p, "project") for p in find_plugins(Path(root) / ".mydevagent" / "plugins")]
+    places += [(p, "user") for p in find_plugins(state_plugins())]
     places += [(p, "claude code") for p in claude_code_plugins() if p.is_dir()]
     for raw in os.environ.get("MYDEVAGENT_PLUGINS_DIRS", "").split(os.pathsep):
         if raw.strip():
@@ -124,9 +124,9 @@ def _plugin(path: Path, source: str) -> Plugin:
     return Plugin(str(manifest.get("name") or path.name), path, source, manifest)
 
 
-# ------------------------------------------------------------ installazione
+# ------------------------------------------------------------ installation
 def install(spec: str) -> list[Plugin]:
-    """Da una cartella locale, un URL git o `utente/repo` di GitHub (come `/plugin marketplace add`)."""
+    """From a local folder, a git URL or a GitHub `user/repo` (like `/plugin marketplace add`)."""
     base = state_plugins()
     base.mkdir(parents=True, exist_ok=True)
     local = Path(spec).expanduser()
@@ -136,7 +136,7 @@ def install(spec: str) -> list[Plugin]:
         url = spec if ("://" in spec or spec.startswith("git@")) else f"https://github.com/{spec.strip('/')}"
         dest = base / url.rstrip("/").removesuffix(".git").rsplit("/", 1)[-1].rsplit(":", 1)[-1]
     if dest.exists():
-        raise ValueError(f"{dest.name} è già installato (/plugin update {dest.name})")
+        raise ValueError(f"{dest.name} is already installed (/plugin update {dest.name})")
     if local.is_dir():
         shutil.copytree(local, dest, ignore=shutil.ignore_patterns(".git"))
     else:
@@ -144,38 +144,38 @@ def install(spec: str) -> list[Plugin]:
     found = find_plugins(dest)
     if not found:
         remove_folder(dest)
-        raise ValueError("nessun plugin trovato: serve .claude-plugin/plugin.json o una cartella "
-                         "commands/, skills/ o agents/")
-    return [_plugin(p, "utente") for p in found]
+        raise ValueError("no plugin found: it needs .claude-plugin/plugin.json or a "
+                         "commands/, skills/ or agents/ folder")
+    return [_plugin(p, "user") for p in found]
 
 
 def folder_of(plugin: Plugin) -> Path | None:
-    """La cartella scaricata con /plugin install che contiene il plugin (un marketplace ne contiene più d'uno)."""
+    """The folder downloaded with /plugin install that contains the plugin (a marketplace contains more than one)."""
     base = state_plugins().resolve()
     path = plugin.path.resolve()
-    if plugin.source != "utente" or not path.is_relative_to(base):
+    if plugin.source != "user" or not path.is_relative_to(base):
         return None
     return base / path.relative_to(base).parts[0]
 
 
 def installed_folder(name: str, root: Path) -> Path:
-    """Per nome del plugin oppure della cartella scaricata (per esempio `claude-code`)."""
+    """By plugin name or by downloaded folder name (for example `claude-code`)."""
     plugin = load_plugins(root).get(name)
     if plugin is None:
         folder = state_plugins() / name
         if Path(name).name != name or not folder.is_dir():
-            raise ValueError(f"plugin sconosciuto: {name} (/plugin per l'elenco)")
+            raise ValueError(f"unknown plugin: {name} (/plugin for the list)")
         return folder.resolve()
     folder = folder_of(plugin)
     if folder is None:
-        raise ValueError(f"{name} non è stato installato con /plugin install (viene da: {plugin.source})")
+        raise ValueError(f"{name} was not installed with /plugin install (it comes from: {plugin.source})")
     return folder
 
 
 def update(name: str, root: Path) -> str:
     folder = installed_folder(name, root)
     if not (folder / ".git").exists():
-        raise ValueError(f"{name} è stato copiato da una cartella: reinstallalo per aggiornarlo")
+        raise ValueError(f"{name} was copied from a folder: reinstall it to update it")
     return _git(["-C", str(folder), "pull", "--ff-only"]).strip()
 
 
@@ -183,14 +183,14 @@ def remove(name: str, root: Path) -> Path:
     folder = installed_folder(name, root)
     others = [p.name for p in load_plugins(root).values() if p.name != name and folder_of(p) == folder]
     if others and name != folder.name:
-        raise ValueError(f"{name} è arrivato con altri {len(others)} plugin nella cartella {folder.name}: "
-                         f"/plugin remove {folder.name} li toglie tutti")
+        raise ValueError(f"{name} came with {len(others)} other plugin(s) in the folder {folder.name}: "
+                         f"/plugin remove {folder.name} removes them all")
     remove_folder(folder)
     return folder
 
 
 def remove_folder(folder: Path) -> None:
-    def force(func, path, _exc):  # su Windows i file di .git sono in sola lettura
+    def force(func, path, _exc):  # on Windows the .git files are read-only
         os.chmod(path, stat.S_IWRITE)
         func(path)
 
@@ -200,10 +200,10 @@ def remove_folder(folder: Path) -> None:
 def _git(args: list[str]) -> str:
     try:
         done = subprocess.run(["git", *args], capture_output=True, text=True, timeout=300,
-                              env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})  # niente attese di password
+                              env={**os.environ, "GIT_TERMINAL_PROMPT": "0"})  # never wait for a password
     except FileNotFoundError as exc:
-        raise ValueError("serve git installato (https://git-scm.com)") from exc
+        raise ValueError("git must be installed (https://git-scm.com)") from exc
     if done.returncode:
         out = (done.stderr or done.stdout).strip()
-        raise ValueError(out.splitlines()[-1] if out else f"git {args[0]} non riuscito")
+        raise ValueError(out.splitlines()[-1] if out else f"git {args[0]} failed")
     return done.stdout

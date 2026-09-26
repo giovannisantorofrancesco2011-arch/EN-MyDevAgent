@@ -1,22 +1,22 @@
-# Continue.dev (VS Code / JetBrains) — copia in ~/.continue/config.yaml
-# Prerequisiti:  `mydevagent serve` in esecuzione  +  Ollama con i modelli del tuo profilo
+# Continue.dev (VS Code / JetBrains) — copy to ~/.continue/config.yaml
+# Prerequisites:  `mydevagent serve` running  +  Ollama with your profile's models
 name: MyDevAgent
 version: 1.0.0
 schema: v1
 
 models:
-  # Chat: il team completo a 15 agenti (router automatico fast/balanced/deep)
-  - name: MyDevAgent (team 15 agenti)
+  # Chat: the full 15-agent team (automatic fast/balanced/deep router)
+  - name: MyDevAgent (15-agent team)
     provider: openai
     model: mydevagent
     apiBase: http://127.0.0.1:8000/v1
-    apiKey: local            # metti MYDEVAGENT_API_KEY se l'hai impostata
+    apiKey: local            # put MYDEVAGENT_API_KEY here if you set it
     roles: [chat]
     defaultCompletionOptions:
       contextLength: 16384
       maxTokens: 4096
 
-  # Deep: forza la pipeline completa (architettura, security, performance, edge case, docs)
+  # Deep: forces the full pipeline (architecture, security, performance, edge cases, docs)
   - name: MyDevAgent Deep
     provider: openai
     model: mydevagent-deep
@@ -24,7 +24,7 @@ models:
     apiKey: local
     roles: [chat]
 
-  # Edit / Apply inline: 1 sola chiamata → veloce
+  # Inline Edit / Apply: a single call → fast
   - name: MyDevAgent Fast
     provider: openai
     model: mydevagent-fast
@@ -32,7 +32,7 @@ models:
     apiKey: local
     roles: [chat, edit, apply]
 
-  # Autocomplete (tab): modello BASE piccolo con FIM, direttamente da Ollama → latenza ~100-300 ms
+  # Autocomplete (tab): small BASE model with FIM, straight from Ollama → latenza ~100-300 ms
   - name: Qwen2.5-Coder 1.5B (autocomplete)
     provider: ollama
     model: qwen2.5-coder:1.5b-base
@@ -42,7 +42,7 @@ models:
       maxPromptTokens: 1024
       onlyMyCode: true
 
-  # Embeddings per @codebase
+  # Embeddings for @codebase
   - name: Nomic Embed
     provider: ollama
     model: nomic-embed-text
@@ -58,5 +58,5 @@ context:
   - provider: currentFile
 
 rules:
-  - Rispondi in italiano, codice e commenti in inglese.
-  - Usa i tag @security @perf @db @web nel messaggio per coinvolgere agenti specifici.
+  - Reply in English, with code and comments in English.
+  - Use the @security @perf @db @web tags in the message to bring in specific agents.

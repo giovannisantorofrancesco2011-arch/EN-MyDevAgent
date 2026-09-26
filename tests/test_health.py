@@ -21,7 +21,7 @@ def state(tmp_path, monkeypatch):
 
 
 def fake_models(monkeypatch, models: list[str] | None):
-    """GET /models del backend: elenco dato, oppure connessione rifiutata se None."""
+    """The backend's GET /models: the given list, or connection refused if None."""
 
     def get(url, headers=None, timeout=None):
         if models is None:
@@ -40,8 +40,8 @@ def test_check_backends_missing_models(settings, monkeypatch):
     assert missing["main"] == "qwen2.5-coder:7b" and "fast" not in missing and "embed" not in missing
     assert not status.ok
     subs = health.substitutes(status)
-    assert subs["main"] == "qwen2.5-coder:1.5b"  # i coder hanno la precedenza
-    assert "vision" not in subs  # nessun modello vision installato
+    assert subs["main"] == "qwen2.5-coder:1.5b"  # coder models take precedence
+    assert "vision" not in subs  # no vision model installed
 
 
 def test_check_backends_down(settings, monkeypatch):
@@ -68,19 +68,19 @@ def test_explain_error_cases(settings):
                                      "found, try pulling it first\"}}", response=httpx.Response(404, request=req),
                                      body=None)
     title, hint = health.explain_error(not_found, settings)
-    assert "qwen2.5-coder:7b non è installato" in title and "/pull qwen2.5-coder:7b" in hint
+    assert "qwen2.5-coder:7b is not installed" in title and "/pull qwen2.5-coder:7b" in hint
 
     title, hint = health.explain_error(openai.APIConnectionError(request=req), settings)
-    assert "Non riesco a contattare" in title and "11434" in title
+    assert "can't reach the model server" in title and "11434" in title
 
     title, _ = health.explain_error(openai.APITimeoutError(request=req), settings)
-    assert "troppo lento" in title
+    assert "too slow" in title
 
     title, hint = health.explain_error(RuntimeError("CUDA out of memory"), settings)
-    assert "memoria" in title and "-p cpu" in hint
+    assert "memory" in title and "-p cpu" in hint
 
-    title, hint = health.explain_error(ValueError("boh"), settings)
-    assert title == "ValueError: boh" and "/doctor" in hint
+    title, hint = health.explain_error(ValueError("nope"), settings)
+    assert title == "ValueError: nope" and "/doctor" in hint
 
 
 def test_hardware_detection_and_profile():
@@ -120,7 +120,7 @@ def test_save_env_updates_and_appends(tmp_path, monkeypatch):
     env = tmp_path / ".env"
     env.write_text("MYDEVAGENT_PROFILE=gpu8\n# MYDEVAGENT_MODEL_MAIN=qwen2.5-coder:7b\n")
     for key in ("MYDEVAGENT_MODEL_MAIN", "MYDEVAGENT_MODEL_FAST"):
-        monkeypatch.setenv(key, "")  # save_env li imposta: così vengono ripristinati a fine test
+        monkeypatch.setenv(key, "")  # save_env sets them: this way they are restored at the end of the test
     health.save_env({"MYDEVAGENT_MODEL_MAIN": "llama3.2:3b", "MYDEVAGENT_MODEL_FAST": "qwen2.5:0.5b"}, env)
     text = env.read_text()
     assert "MYDEVAGENT_MODEL_MAIN=llama3.2:3b" in text and "# MYDEVAGENT_MODEL_MAIN" not in text
@@ -141,13 +141,13 @@ def test_startup_uses_installed_models(settings, tmp_path, monkeypatch):
     fake_models(monkeypatch, ["qwen2.5-coder:1.5b", "nomic-embed-text"])
     saved = {}
     monkeypatch.setattr(health, "save_env", lambda values: saved.update(values) or tmp_path / ".env")
-    app, console = make_app(settings, tmp_path, ["2", "s"])
+    app, console = make_app(settings, tmp_path, ["2", "y"])
     app.startup_check()
     out = console.export_text()
-    assert "Mancano dei modelli" in out and "qwen2.5-coder:7b" in out and "Scaricali ora" in out
+    assert "Some models are missing" in out and "qwen2.5-coder:7b" in out and "Download them now" in out
     assert settings.resolve_model("main")[0] == "qwen2.5-coder:1.5b" and app.model == "qwen2.5-coder:1.5b"
     assert saved["MYDEVAGENT_MODEL_MAIN"] == "qwen2.5-coder:1.5b"
-    assert "consiglio" not in out  # il profilo gpu8 è già adatto a una GPU da 8 GB
+    assert "recommend" not in out  # the gpu8 profile already fits an 8 GB GPU
 
 
 def test_startup_backend_down_then_up(settings, tmp_path, monkeypatch):
@@ -162,11 +162,11 @@ def test_startup_backend_down_then_up(settings, tmp_path, monkeypatch):
         return httpx.Response(200, json={"data": [{"id": m} for m in models]}, request=httpx.Request("GET", url))
 
     monkeypatch.setattr(health.httpx, "get", get)
-    app, console = make_app(settings, tmp_path, [""])  # Invio = riprova
+    app, console = make_app(settings, tmp_path, [""])  # Enter = retry
     status = app.startup_check()
     out = console.export_text()
-    assert "non risponde" in out and "ollama" in out.lower()
-    assert status.ok and "Mancano" not in out
+    assert "not responding" in out and "ollama" in out.lower()
+    assert status.ok and "missing" not in out
 
 
 def test_startup_pull_and_hardware_hint(settings, tmp_path, monkeypatch):
@@ -178,11 +178,11 @@ def test_startup_pull_and_hardware_hint(settings, tmp_path, monkeypatch):
     app, console = make_app(settings, tmp_path, ["1", "3"])
     app.startup_check()
     out = console.export_text()
-    assert pulled == ["qwen2.5-coder:7b"] and "Scaricato qwen2.5-coder:7b" in out
-    assert "ti consiglio il profilo gpu8" in out and "RTX 4060" in out
+    assert pulled == ["qwen2.5-coder:7b"] and "Downloaded qwen2.5-coder:7b" in out
+    assert "I recommend the gpu8 profile" in out and "RTX 4060" in out
     console.export_text(clear=True)
-    app.startup_check()  # il consiglio sull'hardware compare una volta sola
-    assert "consiglio" not in console.export_text()
+    app.startup_check()  # the hardware hint appears only once
+    assert "recommend" not in console.export_text()
 
 
 def test_tui_error_is_explained(settings, tmp_path):
@@ -198,6 +198,6 @@ def test_tui_error_is_explained(settings, tmp_path):
         app = TuiApp(Orchestrator(settings, llm=Broken()), console=console, prompt_input=pipe,
                      prompt_output=DummyOutput(), ask=lambda q: "1", root=tmp_path, background=False)
         app.agent_mode = False
-        app.run_turn("/fast ciao", {})
+        app.run_turn("/fast hello", {})
     out = console.export_text()
-    assert "Il modello qwen2.5-coder:7b non è installato" in out and "/pull qwen2.5-coder:7b" in out
+    assert "The model qwen2.5-coder:7b is not installed" in out and "/pull qwen2.5-coder:7b" in out

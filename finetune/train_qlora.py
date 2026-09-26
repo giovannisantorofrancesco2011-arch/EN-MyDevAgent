@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Fine-tuning QLoRA con Unsloth (2x più veloce, ~60% VRAM in meno) sul dataset dei tuoi progetti.
+"""QLoRA fine-tuning with Unsloth (2x faster, ~60% less VRAM) on the dataset from your projects.
 
-  pip install -e ".[finetune]"          # richiede GPU NVIDIA (Linux/WSL2) — oppure usa Google Colab
-  python finetune/build_dataset.py ~/code/mio-progetto
+  pip install -e ".[finetune]"          # requires an NVIDIA GPU (Linux/WSL2) — or use Google Colab
+  python finetune/build_dataset.py ~/code/my-project
   python finetune/train_qlora.py --config finetune/config_qlora.yaml
-  bash finetune/export_gguf.sh          # → modello Ollama "mydevagent-custom"
+  bash finetune/export_gguf.sh          # → Ollama model "mydevagent-custom"
 """
 
 from __future__ import annotations
@@ -19,11 +19,11 @@ import yaml
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default="finetune/config_qlora.yaml")
-    ap.add_argument("--export-gguf", action="store_true", help="esporta subito anche il GGUF quantizzato")
+    ap.add_argument("--export-gguf", action="store_true", help="also export the quantized GGUF right away")
     args = ap.parse_args()
     cfg = yaml.safe_load(Path(args.config).read_text())
 
-    from unsloth import FastLanguageModel  # import prima di transformers/trl (patch di Unsloth)
+    from unsloth import FastLanguageModel  # import before transformers/trl (Unsloth patches)
     from datasets import Dataset, load_dataset
     from trl import SFTConfig, SFTTrainer
 
@@ -63,7 +63,7 @@ def main() -> None:
         packing=False, report_to="none")
     kwargs = dict(model=model, train_dataset=train_ds, eval_dataset=val_ds, args=sft)
     try:
-        trainer = SFTTrainer(processing_class=tokenizer, **kwargs)   # TRL recente
+        trainer = SFTTrainer(processing_class=tokenizer, **kwargs)   # recent TRL
     except TypeError:
         trainer = SFTTrainer(tokenizer=tokenizer, **kwargs)          # TRL < 0.12
     trainer.train()
@@ -71,12 +71,12 @@ def main() -> None:
     out = Path(t["output_dir"])
     model.save_pretrained(out / "adapter")
     tokenizer.save_pretrained(out / "adapter")
-    print(f"LoRA salvato in {out / 'adapter'}")
+    print(f"LoRA saved to {out / 'adapter'}")
 
     if args.export_gguf:
         exp = cfg["export"]
         model.save_pretrained_gguf(exp["gguf_dir"], tokenizer, quantization_method=exp["quantization"])
-        print(f"GGUF salvato in {exp['gguf_dir']} — ora: bash finetune/export_gguf.sh")
+        print(f"GGUF saved to {exp['gguf_dir']} — now run: bash finetune/export_gguf.sh")
 
 
 if __name__ == "__main__":

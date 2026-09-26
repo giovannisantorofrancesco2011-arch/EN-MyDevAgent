@@ -1,7 +1,7 @@
-"""Statistiche d'uso per /stats: ogni richiesta aggiunge una riga a ~/.mydevagent/stats.jsonl.
+"""Usage stats for /stats: every request appends a line to ~/.mydevagent/stats.jsonl.
 
-Si contano gli stessi eventi che disegnano la UI (token, tool, diff, test), sia dal terminale sia da
-MyDevAgent Studio. Il file è in JSON Lines: più finestre possono scriverci insieme, una riga rotta si salta.
+It counts the same events the UI draws (tokens, tools, diffs, tests), both from the terminal and from
+MyDevAgent Studio. The file is JSON Lines: several windows can write to it at once, a broken line is skipped.
 """
 
 from __future__ import annotations
@@ -22,11 +22,11 @@ def stats_file() -> Path:
 
 @dataclass
 class Turn:
-    """Una richiesta: si riempie con gli eventi del turno, poi `finish()` la chiude e la salva."""
+    """One request: it fills up with the turn's events, then `finish()` closes and saves it."""
 
     project: str = ""
     session: str = ""
-    source: str = "terminale"  # terminale | studio
+    source: str = "terminal"  # terminal | studio
     model: str = ""
     team: str = ""
     started: float = field(default_factory=time.time)
@@ -46,7 +46,7 @@ class Turn:
         if kind == "route":
             self.team = event.get("mode", "")
         elif kind == "llm_call" or (kind == "agent_end" and not event.get("counted") and event.get("agent") != "final"):
-            # gli agent_end «counted» riassumono chiamate già arrivate come llm_call
+            # "counted" agent_end events summarize calls that already arrived as llm_call
             self.tokens += event.get("prompt_tokens", 0) + event.get("completion_tokens", 0)
         elif kind == "tool_result":
             self.tools += 1
@@ -65,7 +65,7 @@ class Turn:
 
     def finish(self, answer: str = "", *, estimate: bool = False, failed: bool = False, save: bool = True
                ) -> dict[str, Any]:
-        """`estimate`: la risposta finale arriva in streaming senza conteggio, la stima come la UI (caratteri/4)."""
+        """`estimate`: the final answer streams in without a count, so estimate it like the UI does (characters/4)."""
         self.seconds = round(time.time() - self.started, 1)
         if estimate:
             self.tokens += len(answer) // 4
@@ -77,7 +77,7 @@ class Turn:
 
 
 def append(record: dict[str, Any]) -> None:
-    """Aggiunge la riga al file. Le statistiche non devono mai far fallire un turno."""
+    """Appends the line to the file. Stats must never make a turn fail."""
     path = stats_file()
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -92,7 +92,7 @@ def day_of(record: dict[str, Any]) -> date:
 
 
 def load(days: int | None = None, today: date | None = None) -> list[dict[str, Any]]:
-    """Le richieste salvate; con `days` solo quelle degli ultimi N giorni (oggi compreso)."""
+    """The saved requests; with `days` only those of the last N days (today included)."""
     path = stats_file()
     if not path.is_file():
         return []
@@ -120,14 +120,14 @@ class Summary:
     removed: int = 0
     tests_ok: int = 0
     tests_failed: int = 0
-    per_day: Counter = field(default_factory=Counter)  # date → richieste
+    per_day: Counter = field(default_factory=Counter)  # date → requests
     models: Counter = field(default_factory=Counter)
     teams: Counter = field(default_factory=Counter)
     projects: Counter = field(default_factory=Counter)
     hours: Counter = field(default_factory=Counter)
 
     def streaks(self, today: date | None = None) -> tuple[int, int]:
-        """(serie attuale, serie più lunga) di giorni di fila. La serie attuale regge finché oggi non è finito."""
+        """(current streak, longest streak) of consecutive days. The current streak holds until today is over."""
         days = set(self.per_day)
         longest = run = 0
         previous: date | None = None
@@ -143,7 +143,7 @@ class Summary:
         return current, longest
 
     def to_dict(self, today: date | None = None) -> dict[str, Any]:
-        """Per MyDevAgent Studio (JSON)."""
+        """For MyDevAgent Studio (JSON)."""
         current, longest = self.streaks(today)
         top = {name: dict(counter.most_common(5)) for name, counter in
                (("models", self.models), ("teams", self.teams), ("projects", self.projects))}

@@ -1,4 +1,4 @@
-"""Funzioni di supporto della UI: comandi personalizzati, compattazione, notifiche, warmup, modelli."""
+"""UI helper functions: custom commands, compaction, notifications, warmup, models."""
 
 from __future__ import annotations
 
@@ -33,15 +33,15 @@ INIT_TASK = (
 )
 
 
-# ------------------------------------------------------------ comandi custom
+# ----------------------------------------------------------- custom commands
 def custom_commands(root: Path) -> dict[str, tuple[str, str]]:
-    """Comandi `/nome` da file Markdown, nel formato di Claude Code.
+    """`/name` commands from Markdown files, in the Claude Code format.
 
-    Da dove, il più specifico vince: `.mydevagent/commands` e `.claude/commands` del progetto,
-    `~/.mydevagent/commands`, `~/.claude/commands` e i `commands/` dei plugin. `description:` (nel
-    frontmatter o sulla prima riga) è la descrizione del completamento; `$ARGUMENTS`, `$1`, `$2`… vengono
-    sostituiti con il testo dopo il comando e `${CLAUDE_PLUGIN_ROOT}` con la cartella del plugin.
-    `!`comando`` diventa un'istruzione per l'agente, che lo esegue con i suoi tool e i soliti permessi.
+    Sources, most specific wins: the project's `.mydevagent/commands` and `.claude/commands`,
+    `~/.mydevagent/commands`, `~/.claude/commands` and the plugins' `commands/`. `description:` (in the
+    frontmatter or on the first line) is the completion description; `$ARGUMENTS`, `$1`, `$2`… are
+    replaced with the text after the command and `${CLAUDE_PLUGIN_ROOT}` with the plugin folder.
+    `!`command`` becomes an instruction for the agent, which runs it with its tools and the usual permissions.
     """
     state = Path(os.environ.get("MYDEVAGENT_STATE_DIR", Path.home() / ".mydevagent"))
     sources = [(d, f" (plugin {p.name})", p.path) for p in load_plugins(root).values() for d in p.dirs("commands")]
@@ -58,9 +58,9 @@ def custom_commands(root: Path) -> dict[str, tuple[str, str]]:
                 meta, text = {"description": lines[0].split(":", 1)[1].strip()}, "\n".join(lines[1:])
             if plugin_root:
                 text = text.replace("${CLAUDE_PLUGIN_ROOT}", str(plugin_root))
-            # ponytail: Claude Code esegue !`comando` prima di inviare; qui lo esegue l'agente, con i permessi
+            # ponytail: Claude Code runs !`command` before sending; here the agent runs it, with permissions
             text = re.sub(r"!`([^`\n]+)`", r"(run `\1` with your tools and use its output)", text)
-            out["/" + path.stem.lower()] = ((meta.get("description") or "comando personalizzato") + suffix,
+            out["/" + path.stem.lower()] = ((meta.get("description") or "custom command") + suffix,
                                             text.strip())
     return out
 
@@ -73,7 +73,7 @@ def expand_command(template: str, arguments: str) -> str:
     return f"{template}\n\n{arguments}".strip()
 
 
-# ------------------------------------------------------------- compattazione
+# ---------------------------------------------------------------- compaction
 def history_chars(history: list[dict[str, Any]]) -> int:
     return sum(len(str(m.get("content", ""))) for m in history)
 
@@ -87,9 +87,9 @@ def compact_history(llm, history: list[dict[str, Any]]) -> list[dict[str, Any]]:
             {"role": "assistant", "content": "OK, I have the context. Let's continue."}]
 
 
-# ------------------------------------------------------------------ notifiche
+# ------------------------------------------------------------- notifications
 def notify(title: str, message: str) -> None:
-    """Campanella del terminale + notifica desktop se disponibile (mai bloccante)."""
+    """Terminal bell + desktop notification if available (never blocking)."""
     sys.stdout.write("\a")
     sys.stdout.flush()
     try:
@@ -104,7 +104,7 @@ def notify(title: str, message: str) -> None:
         pass
 
 
-# --------------------------------------------------------- modelli e warmup
+# -------------------------------------------------------- models and warmup
 def list_models(settings) -> tuple[set[str] | None, str]:
     model, backend = settings.resolve_model("main")
     try:
@@ -117,7 +117,7 @@ def list_models(settings) -> tuple[set[str] | None, str]:
 
 
 def warmup(llm, settings) -> threading.Thread:
-    """Carica il modello principale in memoria in background: la prima risposta non paga il caricamento."""
+    """Loads the main model into memory in the background: the first answer does not pay for loading."""
 
     def run() -> None:
         with contextlib.suppress(Exception):

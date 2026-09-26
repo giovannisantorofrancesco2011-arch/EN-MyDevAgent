@@ -1,4 +1,4 @@
-"""MyDevAgent — assistente di programmazione local-first con 15 agenti specializzati."""
+"""MyDevAgent — local-first coding assistant with 15 specialized agents."""
 
 __version__ = "1.0.0"
 

@@ -1,6 +1,6 @@
-"""Acchiappa le stelle: muovi il cestino con le frecce e prendi le stelle che cadono.
+"""Catch the Stars: move the basket with the arrow keys and catch the falling stars.
 
-Avvio: python main.py  (prima: python -m pip install -r requirements.txt)
+Run: python main.py  (first: python -m pip install -r requirements.txt)
 """
 
 import random
@@ -24,7 +24,7 @@ def new_star() -> pygame.Rect:
 def main() -> None:
     pygame.init()
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Acchiappa le stelle")
+    pygame.display.set_caption("Catch the Stars")
     clock = pygame.time.Clock()
     font = pygame.font.Font(None, 36)
 
@@ -38,7 +38,7 @@ def main() -> None:
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_r and lives <= 0:
-                stars, score, lives = [new_star()], 0, LIVES  # ricomincia
+                stars, score, lives = [new_star()], 0, LIVES  # restart
 
         if lives > 0:
             keys = pygame.key.get_pressed()
@@ -46,7 +46,7 @@ def main() -> None:
             player.clamp_ip(screen.get_rect())
 
             for star in stars[:]:
-                star.y += 3 + score // 5  # più punti fai, più veloci cadono
+                star.y += 3 + score // 5  # the more points you score, the faster they fall
                 if star.colliderect(player):
                     stars.remove(star)
                     score += 1
@@ -60,9 +60,9 @@ def main() -> None:
         pygame.draw.rect(screen, PURPLE, player, border_radius=8)
         for star in stars:
             pygame.draw.circle(screen, YELLOW, star.center, star.width // 2)
-        screen.blit(font.render(f"Punti: {score}   Vite: {lives}", True, WHITE), (16, 12))
+        screen.blit(font.render(f"Score: {score}   Lives: {lives}", True, WHITE), (16, 12))
         if lives <= 0:
-            text = font.render("Game over! Premi R per ricominciare", True, WHITE)
+            text = font.render("Game over! Press R to restart", True, WHITE)
             screen.blit(text, text.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
         pygame.display.flip()
         clock.tick(FPS)

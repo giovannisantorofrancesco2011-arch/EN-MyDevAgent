@@ -10,7 +10,7 @@ from mydevagent.registry import load_registry
 def offline(monkeypatch, tmp_path):
     monkeypatch.setenv("MYDEVAGENT_OFFLINE", "1")
     monkeypatch.delenv("MYDEVAGENT_API_KEY", raising=False)
-    # niente plugin, hook, skill o server MCP veri dell'utente (~/.claude, ~/.mydevagent) nei test
+    # no real user plugins, hooks, skills or MCP servers (~/.claude, ~/.mydevagent) in tests
     for var in ("HOME", "USERPROFILE"):
         monkeypatch.setenv(var, str(tmp_path / "home"))
     monkeypatch.setenv("MYDEVAGENT_STATE_DIR", str(tmp_path / "state"))

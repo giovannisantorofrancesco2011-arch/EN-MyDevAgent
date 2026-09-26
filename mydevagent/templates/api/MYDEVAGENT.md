@@ -1,12 +1,12 @@
-# La mia API
+# My API
 
-API web in Python con FastAPI. I dati sono in memoria (si azzerano al riavvio).
+Web API in Python with FastAPI. The data lives in memory (it resets on restart).
 
-## Comandi
-- installa: `python -m pip install -r requirements.txt`
-- avvio: `python -m uvicorn main:app --reload` (documentazione interattiva su http://127.0.0.1:8000/docs)
+## Commands
+- install: `python -m pip install -r requirements.txt`
+- run: `python -m uvicorn main:app --reload` (interactive docs at http://127.0.0.1:8000/docs)
 - test: `python -m pytest -q`
 
-## Convenzioni
-- ogni endpoint è una funzione con `@app.get` / `@app.post` e i tipi dei dati sono classi Pydantic
-- per ogni endpoint nuovo aggiungi un test in test_main.py
+## Conventions
+- each endpoint is a function with `@app.get` / `@app.post`, and the data types are Pydantic classes
+- for every new endpoint, add a test in test_main.py

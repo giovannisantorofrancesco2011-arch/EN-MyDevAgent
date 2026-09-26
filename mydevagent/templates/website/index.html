@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My website</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <span class="logo">✻ My website</span>
+    <nav>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+      <button id="theme" type="button" aria-label="Toggle theme">🌙</button>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>Hi! Welcome to my website</h1>
+      <p>Here I tell you who I am and what I'm building.</p>
+      <button id="wave" type="button">Say hi</button>
+      <p id="greetings" class="note">Nobody has said hi yet.</p>
+    </section>
+
+    <section id="projects">
+      <h2>Projects</h2>
+      <div class="cards">
+        <article class="card">
+          <h3>First project</h3>
+          <p>A short description of what it does and why I like it.</p>
+        </article>
+        <article class="card">
+          <h3>Second project</h3>
+          <p>Another idea I brought to life.</p>
+        </article>
+        <article class="card">
+          <h3>Coming soon</h3>
+          <p>The next project is already in the works.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="contact">
+      <h2>Contact</h2>
+      <p>Write to me at <a href="mailto:hello@example.com">hello@example.com</a></p>
+    </section>
+  </main>
+
+  <footer>© <span id="year"></span> · made with MyDevAgent</footer>
+  <script src="script.js"></script>
+</body>
+</html>

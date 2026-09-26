@@ -1,10 +1,10 @@
-"""Anteprima dei siti: apre una pagina su localhost in un browser senza finestra (Chrome, Edge o Chromium
-già installati), fa uno screenshot e raccoglie errori della console, file mancanti e testo visibile. Lo
-screenshot lo descrive il modello `vision`, così l'agente «vede» il sito che ha fatto.
+"""Website preview: opens a localhost page in a headless browser (an already installed Chrome, Edge or
+Chromium), takes a screenshot and collects console errors, missing files and visible text. The
+screenshot is described by the `vision` model, so the agent "sees" the site it built.
 
-- un file HTML del progetto viene servito da un piccolo server su 127.0.0.1 (niente file nascosti o segreti)
-- un sito con il suo server (npm run dev, uvicorn…) si apre con il suo url; il comando `start` lo accende
-  e resta acceso fino all'uscita da MyDevAgent
+- a project HTML file is served by a small server on 127.0.0.1 (no hidden files or secrets)
+- a site with its own server (npm run dev, uvicorn…) is opened at its url; the `start` command launches
+  it and it keeps running until MyDevAgent exits
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ _lock = threading.Lock()
 
 
 def find_browser() -> str | None:
-    """Chrome, Edge o Chromium già installati (MYDEVAGENT_BROWSER per sceglierne uno)."""
+    """An already installed Chrome, Edge or Chromium (MYDEVAGENT_BROWSER to pick one)."""
     if os.environ.get("MYDEVAGENT_BROWSER"):
         return os.environ["MYDEVAGENT_BROWSER"]
     for name in BROWSER_NAMES:
@@ -64,9 +64,9 @@ def is_local(url: str) -> bool:
     return host in LOCAL_HOSTS or host.endswith(".localhost")
 
 
-# ------------------------------------------------------------ file del progetto
+# ------------------------------------------------------------ project files
 class _Files(SimpleHTTPRequestHandler):
-    """I file del progetto su 127.0.0.1: niente file nascosti (.git, .env) né chiavi; ricorda i 404."""
+    """Project files on 127.0.0.1: no hidden files (.git, .env) or keys; remembers 404s."""
 
     def send_head(self):
         path = unquote(urlparse(self.path).path)
@@ -85,7 +85,7 @@ class _Files(SimpleHTTPRequestHandler):
 
 
 def serve(root: Path) -> str:
-    """Indirizzo del server dei file del progetto: uno per cartella, acceso fino all'uscita."""
+    """Address of the project file server: one per folder, running until exit."""
     root = Path(root).resolve()
     with _lock:
         server = _servers.get(root)
@@ -98,7 +98,7 @@ def serve(root: Path) -> str:
     return f"http://127.0.0.1:{server.server_address[1]}"
 
 
-# ------------------------------------------------------------ server del progetto
+# ------------------------------------------------------------ project server
 def _tail(path: Path, lines: int = 15) -> str:
     try:
         return "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:])
@@ -107,7 +107,7 @@ def _tail(path: Path, lines: int = 15) -> str:
 
 
 def start_server(root: Path, command: str, url: str, timeout: float = 60) -> str:
-    """Accende (una volta sola) il server del progetto e aspetta che `url` risponda. "" se è pronto."""
+    """Start the project server (only once) and wait for `url` to answer. "" when it is ready."""
     root = Path(root).resolve()
     log = root / ".mydevagent" / "preview-server.log"
     with _lock:
@@ -115,7 +115,7 @@ def start_server(root: Path, command: str, url: str, timeout: float = 60) -> str
         if proc is None or proc.poll() is not None:
             log.parent.mkdir(parents=True, exist_ok=True)
             group = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if sys.platform == "win32"
-                     else {"start_new_session": True})  # così si spegne con tutti i suoi figli
+                     else {"start_new_session": True})  # so it shuts down along with all its children
             with open(log, "wb") as out:
                 proc = subprocess.Popen(command, shell=True, cwd=root, stdout=out, stderr=subprocess.STDOUT,
                                         stdin=subprocess.DEVNULL, **group)
@@ -157,14 +157,14 @@ def _console(logs: str) -> list[str]:
 
 
 def capture(browser: str, url: str, screenshot: Path) -> tuple[str, list[str]]:
-    """Screenshot della pagina e (html dopo JavaScript, messaggi della console)."""
+    """Screenshot the page and return (html after JavaScript, console messages)."""
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as profile:
         args = [browser, "--headless=new", "--disable-gpu", "--hide-scrollbars", "--no-first-run",
                 "--no-default-browser-check", f"--user-data-dir={profile}", "--window-size=1280,800",
                 "--virtual-time-budget=3000"]
         if sys.platform.startswith("linux") and os.geteuid() == 0:
-            args.append("--no-sandbox")  # Chrome non parte come root senza
-        # la console: su stderr, oppure (Windows) nel chrome_debug.log del profilo
+            args.append("--no-sandbox")  # Chrome won't start as root without it
+        # the console: on stderr, or (Windows) in the profile's chrome_debug.log
         shot = subprocess.run(args + ["--enable-logging=stderr", "--v=0", f"--screenshot={screenshot}", url],
                               capture_output=True, text=True, errors="replace", timeout=BROWSER_TIMEOUT)
         dom = subprocess.run(args + ["--enable-logging", "--v=0", "--dump-dom", url],
@@ -205,7 +205,7 @@ def preview(root: Path, *, url: str = "", path: str = "", start: str = "", look:
     lines = [f"Preview of {url}" + (" (screenshot: .mydevagent/preview.png)" if screenshot.is_file() else ""),
              f"Title: {title.group(1).strip() if title else '(none)'}",
              "Console: " + ("no messages" if not console else "\n" + "\n".join(f"- {c}" for c in console[:20]))]
-    missing = sorted(server.missing - {"/favicon.ico"}) if server is not None else []  # l'icona la chiede sempre
+    missing = sorted(server.missing - {"/favicon.ico"}) if server is not None else []  # the browser always asks for the icon
     if missing:
         lines.append("Missing files (404): " + ", ".join(missing[:20]))
     if screenshot.is_file() and llm is not None:

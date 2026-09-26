@@ -1,17 +1,17 @@
-"""Sotto-agenti come in Claude Code: un file Markdown con nome, descrizione e prompt di sistema.
+"""Subagents as in Claude Code: a Markdown file with a name, description and system prompt.
 
     ---
     name: code-reviewer
-    description: Rivede il codice appena modificato. Usalo dopo ogni modifica importante.
-    tools: Read, Grep, Glob        # facoltativo: senza, ha tutti i tool
-    model: haiku                   # facoltativo: haiku usa il modello veloce
+    description: Reviews freshly changed code. Use it after every significant change.
+    tools: Read, Grep, Glob        # optional: without it, it has every tool
+    model: haiku                   # optional: haiku uses the fast model
     ---
-    Sei un revisore severo…
+    You are a strict reviewer…
 
-L'agente principale li chiama con il tool `task`: il sotto-agente lavora in un contesto tutto suo (non
-vede la conversazione), con i suoi tool e i soliti permessi, e restituisce solo il resoconto finale.
-Cartelle: `.mydevagent/agents` e `.claude/agents` del progetto, `~/.mydevagent/agents`, `~/.claude/agents`
-e gli `agents/` dei plugin.
+The main agent calls them with the `task` tool: the subagent works in a context of its own (it does not
+see the conversation), with its own tools and the usual permissions, and returns only its final report.
+Folders: the project's `.mydevagent/agents` and `.claude/agents`, `~/.mydevagent/agents`, `~/.claude/agents`
+and the plugins' `agents/`.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from pathlib import Path
 from .plugins import load_plugins
 from .skills import short, split_frontmatter
 
-# i tool di Claude Code → quelli di MyDevAgent
+# Claude Code's tools → MyDevAgent's
 TOOL_NAMES = {"Read": ["read_file"], "Grep": ["grep"], "Glob": ["list_files"], "LS": ["list_files"],
               "Bash": ["bash", "run_tests"], "Edit": ["edit_file"], "MultiEdit": ["edit_file"],
               "Write": ["write_file"], "NotebookEdit": ["edit_file"], "NotebookRead": ["read_file"],
@@ -38,7 +38,7 @@ class SubAgent:
     description: str
     prompt: str
     source: str
-    tools: list[str] | None = None  # None = tutti
+    tools: list[str] | None = None  # None = all
     model: str = ""
 
     @property
@@ -56,22 +56,22 @@ class SubAgent:
 
 
 def parse_tools(value: str) -> list[str] | None:
-    """`Read, Grep` oppure `["Read", "Grep"]` (entrambi si trovano nei plugin)."""
+    """`Read, Grep` or `["Read", "Grep"]` (both show up in plugins)."""
     return [t.strip(" '\"") for t in value.strip().strip("[]").split(",") if t.strip(" '\"")] or None
 
 
 def agent_dirs(root: Path) -> list[tuple[Path, str]]:
     home = Path.home()
     state = Path(os.environ.get("MYDEVAGENT_STATE_DIR", home / ".mydevagent"))
-    dirs = [(root / ".mydevagent" / "agents", "progetto"), (root / ".claude" / "agents", "progetto"),
-            (state / "agents", "utente"), (home / ".claude" / "agents", "utente")]
+    dirs = [(root / ".mydevagent" / "agents", "project"), (root / ".claude" / "agents", "project"),
+            (state / "agents", "user"), (home / ".claude" / "agents", "user")]
     for plugin in load_plugins(root).values():
         dirs += [(d, f"plugin {plugin.name}") for d in plugin.dirs("agents")]
     return dirs
 
 
 def load_subagents(root: Path) -> dict[str, SubAgent]:
-    """nome → sotto-agente. A parità di nome vince la cartella più specifica (il progetto)."""
+    """name → subagent. On a name clash the most specific folder wins (the project)."""
     found: dict[str, SubAgent] = {}
     for folder, source in agent_dirs(Path(root)):
         if not folder.is_dir():

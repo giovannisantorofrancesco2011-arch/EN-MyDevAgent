@@ -1,15 +1,15 @@
 # =====================================================================
-#  I 20 agenti estesi (16-35): usati solo in /ultra-deep (o se li menzioni con @alias)
-#  Stessi campi di agents.yaml. Stage aggiuntivo: judge (Integratore capo).
+#  The 20 extended agents (16-35): used only in /ultra-deep (or when you mention them with @alias)
+#  Same fields as agents.yaml. Extra stage: judge (Chief Integrator).
 # =====================================================================
 
 agents:
   - id: 16
     key: requirements
-    name: "Analista dei requisiti"
+    name: "Requirements Analyst"
     stage: plan
-    role: "Trasforma la richiesta in requisiti chiari: user story, criteri di accettazione, casi d'uso, vincoli, cosa è fuori scope."
-    goal: "Eliminare ambiguità prima del design."
+    role: "Turns the request into clear requirements: user stories, acceptance criteria, use cases, constraints, what is out of scope."
+    goal: "Remove ambiguity before design."
     prompt: 16_requirements.md
     tier: reasoning
     max_tokens: 700
@@ -22,8 +22,8 @@ agents:
     key: api_design
     name: "API Designer"
     stage: specialist
-    role: "Contratti API: OpenAPI/GraphQL schema, naming, versioning, paginazione, errori, idempotenza, compatibilità."
-    goal: "API coerenti, evolvibili e facili da usare."
+    role: "API contracts: OpenAPI/GraphQL schemas, naming, versioning, pagination, errors, idempotency, compatibility."
+    goal: "Consistent, evolvable and easy-to-use APIs."
     prompt: 17_api_design.md
     tier: main
     max_tokens: 1200
@@ -36,8 +36,8 @@ agents:
     key: mobile
     name: "Mobile"
     stage: specialist
-    role: "App mobile: React Native/Expo, Flutter, Swift/SwiftUI, Kotlin/Jetpack Compose, offline, permessi, store."
-    goal: "App mobili fluide, native nel comportamento e pronte per gli store."
+    role: "Mobile apps: React Native/Expo, Flutter, Swift/SwiftUI, Kotlin/Jetpack Compose, offline, permissions, stores."
+    goal: "Smooth mobile apps that behave natively and are ready for the stores."
     prompt: 18_mobile.md
     tier: main
     max_tokens: 1400
@@ -50,8 +50,8 @@ agents:
     key: cloud
     name: "Cloud Architect"
     stage: specialist
-    role: "Architettura cloud: AWS/GCP/Azure, serverless, networking, IAM, storage, costi, alta disponibilità."
-    goal: "Infrastruttura sicura, affidabile e con costi sotto controllo."
+    role: "Cloud architecture: AWS/GCP/Azure, serverless, networking, IAM, storage, costs, high availability."
+    goal: "Secure, reliable infrastructure with costs under control."
     prompt: 19_cloud.md
     tier: main
     max_tokens: 1200
@@ -64,8 +64,8 @@ agents:
     key: data
     name: "Data Engineer"
     stage: specialist
-    role: "Pipeline dati: ETL/ELT, batch e streaming, Spark, dbt, Airflow, Kafka, qualità e schemi dei dati."
-    goal: "Dati corretti, idempotenti e tracciabili lungo tutta la pipeline."
+    role: "Data pipelines: ETL/ELT, batch and streaming, Spark, dbt, Airflow, Kafka, data quality and schemas."
+    goal: "Correct, idempotent and traceable data across the whole pipeline."
     prompt: 20_data.md
     tier: main
     max_tokens: 1200
@@ -78,8 +78,8 @@ agents:
     key: ai_ml
     name: "AI/ML Engineer"
     stage: specialist
-    role: "Integrazione di modelli: LLM, RAG, embeddings, fine-tuning, valutazione, ML classico, inferenza efficiente."
-    goal: "Funzionalità AI affidabili, misurabili ed economiche."
+    role: "Model integration: LLMs, RAG, embeddings, fine-tuning, evaluation, classic ML, efficient inference."
+    goal: "Reliable, measurable and cost-effective AI features."
     prompt: 21_ai_ml.md
     tier: main
     max_tokens: 1200
@@ -90,10 +90,10 @@ agents:
 
   - id: 22
     key: concurrency
-    name: "Concorrenza & Async"
+    name: "Concurrency & Async"
     stage: specialist
-    role: "Thread, async/await, lock, code, race condition, deadlock, backpressure, cancellazione."
-    goal: "Codice concorrente corretto, senza race e senza blocchi."
+    role: "Threads, async/await, locks, queues, race conditions, deadlocks, backpressure, cancellation."
+    goal: "Correct concurrent code, free of races and deadlocks."
     prompt: 22_concurrency.md
     tier: reasoning
     max_tokens: 900
@@ -104,10 +104,10 @@ agents:
 
   - id: 23
     key: systems
-    name: "Sistemi & Low-level"
+    name: "Systems & Low-level"
     stage: specialist
-    role: "C, C++, Rust, memoria, puntatori, ownership, FFI, performance a basso livello, embedded."
-    goal: "Codice di sistema sicuro in memoria e deterministico."
+    role: "C, C++, Rust, memory, pointers, ownership, FFI, low-level performance, embedded."
+    goal: "Memory-safe and deterministic systems code."
     prompt: 23_systems.md
     tier: main
     max_tokens: 1200
@@ -118,10 +118,10 @@ agents:
 
   - id: 24
     key: a11y_i18n
-    name: "Accessibilità & i18n"
+    name: "Accessibility & i18n"
     stage: gate
-    role: "WCAG 2.2, lettori di schermo, tastiera, contrasto; internazionalizzazione, formati locali, RTL, testi traducibili."
-    goal: "Prodotti usabili da tutti e in tutte le lingue."
+    role: "WCAG 2.2, screen readers, keyboard, contrast; internationalization, locale formats, RTL, translatable text."
+    goal: "Products usable by everyone, in every language."
     prompt: 24_a11y_i18n.md
     tier: reasoning
     max_tokens: 500
@@ -134,8 +134,8 @@ agents:
     key: ux_ui
     name: "UX/UI Designer"
     stage: specialist
-    role: "Design system, gerarchia visiva, flussi utente, stati vuoti/errore, micro-interazioni, coerenza."
-    goal: "Interfacce chiare, coerenti e piacevoli."
+    role: "Design systems, visual hierarchy, user flows, empty/error states, micro-interactions, consistency."
+    goal: "Clear, consistent and pleasant interfaces."
     prompt: 25_ux_ui.md
     tier: main
     max_tokens: 1000
@@ -146,10 +146,10 @@ agents:
 
   - id: 26
     key: observability
-    name: "Osservabilità"
+    name: "Observability"
     stage: gate
-    role: "Log strutturati, metriche, tracing (OpenTelemetry), health check, alert, error tracking."
-    goal: "Capire in produzione cosa succede e perché, in pochi minuti."
+    role: "Structured logs, metrics, tracing (OpenTelemetry), health checks, alerts, error tracking."
+    goal: "Understand what is happening in production and why, within minutes."
     prompt: 26_observability.md
     tier: reasoning
     max_tokens: 500
@@ -160,10 +160,10 @@ agents:
 
   - id: 27
     key: dependencies
-    name: "Dipendenze & Supply chain"
+    name: "Dependencies & Supply Chain"
     stage: research
-    role: "Versioni delle librerie, compatibilità, licenze, CVE note, pinning, lockfile, dipendenze abbandonate."
-    goal: "Solo dipendenze aggiornate, sicure e con licenza compatibile."
+    role: "Library versions, compatibility, licenses, known CVEs, pinning, lockfiles, abandoned dependencies."
+    goal: "Only up-to-date, secure dependencies with compatible licenses."
     prompt: 27_dependencies.md
     tier: main
     max_tokens: 600
@@ -174,10 +174,10 @@ agents:
 
   - id: 28
     key: migration
-    name: "Migrazioni & Legacy"
+    name: "Migrations & Legacy"
     stage: specialist
-    role: "Refactoring su larga scala, migrazioni di framework/versione, strangler pattern, retro-compatibilità."
-    goal: "Cambiare sistemi esistenti senza rompere nulla."
+    role: "Large-scale refactoring, framework/version migrations, strangler pattern, backward compatibility."
+    goal: "Change existing systems without breaking anything."
     prompt: 28_migration.md
     tier: main
     max_tokens: 1200
@@ -190,8 +190,8 @@ agents:
     key: test_strategy
     name: "Test Strategist"
     stage: test
-    role: "Strategia di test: piramide, unit/integrazione/e2e, property-based, fixture, mock, copertura dei rischi."
-    goal: "Pochi test, quelli giusti, che trovano i bug veri."
+    role: "Test strategy: pyramid, unit/integration/e2e, property-based, fixtures, mocks, risk coverage."
+    goal: "Few tests, the right ones, that catch the real bugs."
     prompt: 29_test_strategy.md
     tier: reasoning
     max_tokens: 700
@@ -204,8 +204,8 @@ agents:
     key: threat_model
     name: "Threat Modeling & Privacy"
     stage: gate
-    role: "Threat model (STRIDE), superficie d'attacco, dati personali, GDPR, retention, cifratura, audit log."
-    goal: "Rischi di sicurezza e privacy identificati e mitigati by design."
+    role: "Threat model (STRIDE), attack surface, personal data, GDPR, retention, encryption, audit logs."
+    goal: "Security and privacy risks identified and mitigated by design."
     prompt: 30_threat_model.md
     tier: reasoning
     max_tokens: 600
@@ -216,10 +216,10 @@ agents:
 
   - id: 31
     key: scalability
-    name: "Scalabilità & Carico"
+    name: "Scalability & Load"
     stage: gate
-    role: "Capacity planning, colli di bottiglia, caching, sharding, rate limiting, code, test di carico."
-    goal: "Il sistema regge 10x il carico previsto senza sorprese."
+    role: "Capacity planning, bottlenecks, caching, sharding, rate limiting, queues, load testing."
+    goal: "The system handles 10x the expected load without surprises."
     prompt: 31_scalability.md
     tier: reasoning
     max_tokens: 500
@@ -232,8 +232,8 @@ agents:
     key: release
     name: "Release & Versioning"
     stage: docs
-    role: "Semver, changelog, note di rilascio, packaging, migrazioni di rilascio, rollback."
-    goal: "Ogni rilascio è comprensibile, reversibile e senza sorprese per chi lo usa."
+    role: "Semver, changelogs, release notes, packaging, release migrations, rollback."
+    goal: "Every release is understandable, reversible and free of surprises for its users."
     prompt: 32_release.md
     tier: main
     max_tokens: 500
@@ -244,10 +244,10 @@ agents:
 
   - id: 33
     key: fact_checker
-    name: "Fact-checker web"
+    name: "Web Fact-checker"
     stage: gate
-    role: "Verifica sulle fonti ufficiali (online) che API, flag, versioni e librerie usate esistano e siano usate correttamente."
-    goal: "Zero API inventate o deprecate nel codice consegnato."
+    role: "Checks against official sources (online) that the APIs, flags, versions and libraries used exist and are used correctly."
+    goal: "Zero invented or deprecated APIs in the delivered code."
     prompt: 33_fact_checker.md
     tier: reasoning
     max_tokens: 600
@@ -258,10 +258,10 @@ agents:
 
   - id: 34
     key: devils_advocate
-    name: "Avvocato del diavolo"
+    name: "Devil's Advocate"
     stage: plan
-    role: "Critica il piano: assunzioni deboli, alternative più semplici, rischi ignorati, over-engineering."
-    goal: "Un piano che ha resistito alle obiezioni migliori."
+    role: "Challenges the plan: weak assumptions, simpler alternatives, ignored risks, over-engineering."
+    goal: "A plan that has withstood the best objections."
     prompt: 34_devils_advocate.md
     tier: reasoning
     max_tokens: 500
@@ -272,10 +272,10 @@ agents:
 
   - id: 35
     key: integrator
-    name: "Integratore capo"
+    name: "Chief Integrator"
     stage: judge
-    role: "Unisce i risultati di tutti i quality gate, elimina duplicati e falsi positivi, decide cosa correggere e in che ordine."
-    goal: "Una sola lista di correzioni, prioritizzata e azionabile."
+    role: "Merges the results of all quality gates, removes duplicates and false positives, decides what to fix and in what order."
+    goal: "A single, prioritized and actionable list of fixes."
     prompt: 35_integrator.md
     tier: reasoning
     max_tokens: 700

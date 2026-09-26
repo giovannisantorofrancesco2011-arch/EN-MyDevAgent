@@ -1,8 +1,8 @@
-"""Protocollo dei tool: function calling nativo o formato testuale `<tool name="...">{json}</tool>`.
+"""Tool protocol: native function calling or the text format `<tool name="...">{json}</tool>`.
 
-Il formato testuale è più affidabile con i modelli locali piccoli (7B), che spesso sbagliano il
-function calling nativo. Il parser è tollerante: accetta blocchi ```json, virgole finali e piccoli
-errori, e quando non riesce restituisce un errore chiaro che il modello può correggere al passo dopo.
+The text format is more reliable with small local models (7B), which often get native function
+calling wrong. The parser is lenient: it accepts ```json blocks, trailing commas and small
+mistakes, and when it fails it returns a clear error the model can fix on the next step.
 """
 
 from __future__ import annotations
@@ -34,15 +34,15 @@ def _loads(raw: str) -> dict[str, Any]:
     try:
         value = json.loads(text, strict=False)
     except json.JSONDecodeError:
-        repaired = re.sub(r",\s*([}\]])", r"\1", text)  # virgole finali
-        value = json.loads(repaired, strict=False)  # strict=False: accetta a-capo reali nelle stringhe
+        repaired = re.sub(r",\s*([}\]])", r"\1", text)  # trailing commas
+        value = json.loads(repaired, strict=False)  # strict=False: accepts real newlines inside strings
     if not isinstance(value, dict):
         raise ValueError("arguments must be a JSON object")
     return value
 
 
 def parse_text_calls(text: str) -> tuple[str, list[ToolCall]]:
-    """→ (testo fuori dai tool, chiamate). Un blocco non chiuso a fine output viene comunque letto."""
+    """→ (text outside the tools, calls). An unclosed block at the end of the output is still read."""
     calls: list[ToolCall] = []
     for match in TOOL_RE.finditer(text):
         calls.append(_make_call(match.group(1), match.group(2)))
@@ -73,7 +73,7 @@ def parse_native_calls(calls: list[dict[str, Any]]) -> list[ToolCall]:
 
 
 def describe_tools(specs: list[dict[str, Any]]) -> str:
-    """Istruzioni compatte per il protocollo testuale (stesse in ogni chiamata → prefix cache)."""
+    """Compact instructions for the text protocol (same in every call → prefix cache)."""
     lines = [
         "# Tools",
         "You work directly on the user's project with these tools. To call a tool, write EXACTLY:",

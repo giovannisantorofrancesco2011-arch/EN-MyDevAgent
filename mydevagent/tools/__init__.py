@@ -1,4 +1,4 @@
-"""Tool di MyDevAgent + registro per tool personalizzati (decorator `@tool`)."""
+"""MyDevAgent tools + registry for custom tools (`@tool` decorator)."""
 
 from __future__ import annotations
 
@@ -33,10 +33,10 @@ _REGISTRY: dict[str, Tool] = {}
 
 
 def tool(name: str, description: str, parameters: dict[str, Any] | None = None):
-    """Registra una funzione come tool. La funzione riceve `ctx: ToolContext` + argomenti keyword.
+    """Register a function as a tool. The function receives `ctx: ToolContext` + keyword arguments.
 
-    Esempio:
-        @tool("jira_issue", "Legge una issue Jira", {"type": "object",
+    Example:
+        @tool("jira_issue", "Read a Jira issue", {"type": "object",
               "properties": {"key": {"type": "string"}}, "required": ["key"]})
         def jira_issue(ctx, key: str) -> str: ...
     """
@@ -59,7 +59,7 @@ class ToolContext:
     llm: LLM | None = None
     cache: dict[str, Any] = field(default_factory=dict)
 
-    # servizi creati on-demand (lazy) per non rallentare l'avvio
+    # services are created on demand (lazily) so startup stays fast
     def service(self, name: str, factory: Callable[[], Any]) -> Any:
         if name not in self.cache:
             self.cache[name] = factory()
@@ -101,7 +101,7 @@ BUILTIN_MODULES = ("web_search", "web_fetch", "filesystem", "git_tools", "sandbo
 
 
 class Toolbox:
-    """Espone i tool agli agenti (schemi OpenAI) ed esegue le chiamate in modo sicuro."""
+    """Exposes tools to agents (OpenAI schemas) and executes calls safely."""
 
     def __init__(self, settings: Settings, llm: LLM | None = None) -> None:
         self.ctx = ToolContext(settings=settings, llm=llm)
@@ -111,7 +111,7 @@ class Toolbox:
             import os
             import sys
 
-            if os.getcwd() not in sys.path:  # i moduli custom vivono di solito nel progetto corrente
+            if os.getcwd() not in sys.path:  # custom modules usually live in the current project
                 sys.path.insert(0, os.getcwd())
             for module in settings.tools.custom:
                 importlib.import_module(module)
@@ -131,7 +131,7 @@ class Toolbox:
             result = tools[name].func(self.ctx, **args)
         except TypeError as exc:
             return f"ERROR: bad arguments for {name}: {exc}"
-        except Exception as exc:  # i tool non devono mai far crashare la pipeline
+        except Exception as exc:  # tools must never crash the pipeline
             return f"ERROR: {name} failed: {type(exc).__name__}: {exc}"
         if not isinstance(result, str):
             result = json.dumps(result, ensure_ascii=False, default=str)

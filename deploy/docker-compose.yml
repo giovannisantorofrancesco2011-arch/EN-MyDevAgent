@@ -1,7 +1,7 @@
-# MyDevAgent full stack: Ollama (modelli) + SearXNG (ricerca web gratuita e privata) + server MyDevAgent
+# MyDevAgent full stack: Ollama (models) + SearXNG (free and private web search) + server MyDevAgent
 #   docker compose -f deploy/docker-compose.yml up -d
 #   docker compose -f deploy/docker-compose.yml exec ollama ollama pull qwen2.5-coder:7b
-#   (ripeti per qwen2.5-coder:1.5b e nomic-embed-text)  →  http://localhost:8000/v1
+#   (repeat for qwen2.5-coder:1.5b and nomic-embed-text)  →  http://localhost:8000/v1
 services:
   ollama:
     image: ollama/ollama:latest
@@ -12,9 +12,9 @@ services:
       OLLAMA_FLASH_ATTENTION: "1"
       OLLAMA_KV_CACHE_TYPE: "q8_0"
       OLLAMA_KEEP_ALIVE: "30m"
-      OLLAMA_NUM_PARALLEL: "3"        # agenti in parallelo sullo stesso modello
+      OLLAMA_NUM_PARALLEL: "3"        # agents in parallel on the same model
       OLLAMA_CONTEXT_LENGTH: "16384"
-    # GPU NVIDIA (richiede nvidia-container-toolkit): togli il commento
+    # NVIDIA GPU (requires nvidia-container-toolkit): uncomment
     # deploy:
     #   resources:
     #     reservations:
@@ -38,8 +38,8 @@ services:
       TAVILY_API_KEY: "${TAVILY_API_KEY:-}"
       FIRECRAWL_API_KEY: "${FIRECRAWL_API_KEY:-}"
       MYDEVAGENT_API_KEY: "${MYDEVAGENT_API_KEY:-}"
-    # La sandbox Docker dentro al container richiede il socket di Docker: dà al container
-    # il controllo del daemon dell'host. Abilitalo solo se sai cosa fai.
+    # The Docker sandbox inside the container needs the Docker socket: it gives the container
+    # control of the host's daemon. Only enable it if you know what you're doing.
     # volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
 
 volumes:

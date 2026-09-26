@@ -1,8 +1,8 @@
-"""Esecuzione di codice isolata.
+"""Isolated code execution.
 
-Backend `docker` (default): nessuna rete, filesystem read-only, utente non privilegiato, limiti di
-CPU/RAM/processi, timeout. Backend `local`: subprocess con rlimit — NON è una vera sandbox, quindi è
-utilizzabile solo con `allow_unsafe_local: true`.
+`docker` backend (default): no network, read-only filesystem, unprivileged user, CPU/RAM/process
+limits, timeout. `local` backend: subprocess with rlimit — NOT a real sandbox, so it can only be
+used with `allow_unsafe_local: true`.
 """
 
 from __future__ import annotations
@@ -65,7 +65,7 @@ class Sandbox:
         self._docker_ok: bool | None = None
 
     def docker_available(self) -> bool:
-        """Binario presente E daemon raggiungibile (verificato una volta sola)."""
+        """Binary present AND daemon reachable (checked only once)."""
         if self._docker_ok is None:
             if not shutil.which("docker"):
                 self._docker_ok = False
@@ -103,7 +103,7 @@ class Sandbox:
                 target = workdir / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(content, encoding="utf-8")
-            # rende importabili i package Python generati (app/ → app/__init__.py)
+            # make generated Python packages importable (app/ → app/__init__.py)
             for directory in {p.parent for p in workdir.rglob("*.py")}:
                 if directory != workdir and not (directory / "__init__.py").exists():
                     (directory / "__init__.py").write_text("", encoding="utf-8")
@@ -117,7 +117,7 @@ class Sandbox:
             return self._run_local(workdir, lang, command)
 
     def ensure_image(self, image: str) -> bool:
-        """Scarica l'immagine una volta, fuori dal timeout di esecuzione."""
+        """Pull the image once, outside the execution timeout."""
         if subprocess.run(["docker", "image", "inspect", image], capture_output=True).returncode == 0:
             return True
         try:
@@ -148,7 +148,7 @@ class Sandbox:
         except subprocess.TimeoutExpired as exc:
             subprocess.run(["docker", "kill", name], capture_output=True)
             return RunResult(False, None, _text(exc.stdout), _text(exc.stderr), timed_out=True, backend="docker")
-        if proc.returncode == 125:  # errore di docker stesso (immagine, daemon), non del codice
+        if proc.returncode == 125:  # an error from docker itself (image, daemon), not from the code
             return RunResult(False, 125, "", "", backend="docker",
                              skipped="docker error: " + proc.stderr.strip()[-300:])
         return RunResult(proc.returncode == 0, proc.returncode, proc.stdout[-MAX_OUTPUT:],
@@ -158,10 +158,10 @@ class Sandbox:
         if lang == "python":
             command = [sys.executable, *command[1:]]
 
-        def limits() -> None:  # solo POSIX
+        def limits() -> None:  # POSIX only
             import resource
 
-            if lang == "python":  # V8 (node) riserva molta memoria virtuale: niente RLIMIT_AS
+            if lang == "python":  # V8 (node) reserves lots of virtual memory: no RLIMIT_AS
                 mem = 512 * 1024 * 1024
                 resource.setrlimit(resource.RLIMIT_AS, (mem, mem))
             cpu = int(self.cfg.timeout_s) + 1

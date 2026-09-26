@@ -1,24 +1,25 @@
 # =====================================================================
-#  I 15 agenti di MyDevAgent
+#  The 15 MyDevAgent agents
 #
 #  stage:     research | plan | specialist | test | gate | docs | final
-#  tier:      main | fast | reasoning | vision  (vedi profiles in settings.yaml)
-#  reads:     sezioni della blackboard che l'agente riceve (meno sezioni = meno token)
+#  tier:      main | fast | reasoning | vision  (see profiles in settings.yaml)
+#  reads:     blackboard sections the agent receives (fewer sections = fewer tokens)
 #             request, history, files, rag, research, plan, artifacts, test_report,
 #             issues, image_notes
-#  tools:     tool nativi utilizzabili (solo se il profilo ha native_tools: true);
-#             in ogni caso l'orchestratore fornisce ricerca, RAG e sandbox in modo deterministico
-#  keywords:  parole (IT/EN) usate dal router per attivare l'agente
-#  aliases:   menzioni esplicite, es. "@sec" o "@security"
+#  tools:     native tools the agent may use (only if the profile has native_tools: true);
+#             either way the orchestrator provides search, RAG and sandbox deterministically
+#  keywords:  words the router uses to activate the agent (English, plus a few Italian
+#             hints kept for mixed input)
+#  aliases:   explicit mentions, e.g. "@sec" or "@security"
 # =====================================================================
 
 agents:
   - id: 1
     key: architect
-    name: "Architetto del Codice"
+    name: "Code Architect"
     stage: plan
-    role: "High-level planning, decomposizione del problema, scelte architetturali."
-    goal: "Produrre un piano breve, verificabile e con criteri di accettazione, assegnando il lavoro agli specialisti."
+    role: "High-level planning, problem decomposition, architectural choices."
+    goal: "Produce a short, verifiable plan with acceptance criteria, assigning work to the specialists."
     prompt: 01_architect.md
     tier: reasoning
     max_tokens: 700
@@ -30,10 +31,10 @@ agents:
 
   - id: 2
     key: algorithms
-    name: "Algoritmi & Strutture Dati"
+    name: "Algorithms & Data Structures"
     stage: specialist
-    role: "Algoritmi, strutture dati, complessità computazionale, correttezza formale."
-    goal: "Scegliere l'algoritmo ottimale, dimostrarne correttezza e complessità, implementarlo senza errori off-by-one."
+    role: "Algorithms, data structures, computational complexity, formal correctness."
+    goal: "Pick the optimal algorithm, prove its correctness and complexity, implement it without off-by-one errors."
     prompt: 02_algorithms.md
     tier: main
     max_tokens: 1400
@@ -45,10 +46,10 @@ agents:
 
   - id: 3
     key: language
-    name: "Linguaggi & Framework"
+    name: "Languages & Frameworks"
     stage: specialist
-    role: "Scelta di linguaggio/stack e codice idiomatico (Python, TypeScript, JS, Go, Rust, Java, C#, C++, Kotlin, Swift...)."
-    goal: "Scrivere codice idiomatico, moderno e coerente con lo stack del progetto; agente di default quando nessun dominio è chiaro."
+    role: "Language/stack choice and idiomatic code (Python, TypeScript, JS, Go, Rust, Java, C#, C++, Kotlin, Swift...)."
+    goal: "Write idiomatic, modern code consistent with the project's stack; the default agent when no domain is clear."
     prompt: 03_language.md
     tier: main
     max_tokens: 1600
@@ -62,8 +63,8 @@ agents:
     key: debug_test
     name: "Debugging & Testing"
     stage: test
-    role: "Riproduzione bug, root-cause analysis, test unitari/integrazione, esecuzione in sandbox."
-    goal: "Trovare la causa reale dei bug e dimostrare con test eseguibili che il codice funziona."
+    role: "Bug reproduction, root-cause analysis, unit/integration tests, sandboxed execution."
+    goal: "Find the real cause of bugs and prove with runnable tests that the code works."
     prompt: 04_debug_test.md
     tier: main
     max_tokens: 1400
@@ -77,8 +78,8 @@ agents:
     key: frontend
     name: "Frontend"
     stage: specialist
-    role: "UI web e mobile (React, Next.js, Vue, Svelte, Tailwind, React Native), accessibilità, stato, UX."
-    goal: "Componenti accessibili, tipizzati, responsive e performanti, fedeli ad eventuali mockup."
+    role: "Web and mobile UI (React, Next.js, Vue, Svelte, Tailwind, React Native), accessibility, state, UX."
+    goal: "Accessible, typed, responsive and fast components, faithful to any mockups."
     prompt: 05_frontend.md
     tier: main
     max_tokens: 1800
@@ -92,8 +93,8 @@ agents:
     key: backend
     name: "Backend & API"
     stage: specialist
-    role: "Servizi e API (FastAPI, Django, Node/Express/NestJS, Go, .NET, Spring), REST/GraphQL/gRPC, auth, code/queue."
-    goal: "API robuste con contratti chiari, validazione, gestione errori, idempotenza e osservabilità."
+    role: "Services and APIs (FastAPI, Django, Node/Express/NestJS, Go, .NET, Spring), REST/GraphQL/gRPC, auth, queues."
+    goal: "Robust APIs with clear contracts, validation, error handling, idempotency and observability."
     prompt: 06_backend.md
     tier: main
     max_tokens: 1800
@@ -107,8 +108,8 @@ agents:
     key: database
     name: "Database & ORM"
     stage: specialist
-    role: "Modellazione dati, SQL, NoSQL, migrazioni, indici, ORM (Prisma, SQLAlchemy, Drizzle, TypeORM, EF Core)."
-    goal: "Schemi normalizzati quando serve, query corrette e indicizzate, migrazioni sicure e reversibili."
+    role: "Data modeling, SQL, NoSQL, migrations, indexes, ORMs (Prisma, SQLAlchemy, Drizzle, TypeORM, EF Core)."
+    goal: "Normalized schemas where needed, correct and indexed queries, safe and reversible migrations."
     prompt: 07_database.md
     tier: main
     max_tokens: 1400
@@ -122,8 +123,8 @@ agents:
     key: devops
     name: "DevOps & CI/CD"
     stage: specialist
-    role: "Container, CI/CD, infrastruttura come codice, deploy, osservabilità."
-    goal: "Pipeline e infrastruttura riproducibili, sicure e minimali."
+    role: "Containers, CI/CD, infrastructure as code, deployment, observability."
+    goal: "Reproducible, secure and minimal pipelines and infrastructure."
     prompt: 08_devops.md
     tier: main
     max_tokens: 1400
@@ -137,8 +138,8 @@ agents:
     key: security
     name: "Security & Best Practices"
     stage: gate
-    role: "Sicurezza applicativa (OWASP Top 10, secret, injection, authn/authz, supply chain, crittografia)."
-    goal: "Individuare vulnerabilità reali e proporre fix concreti; può bloccare la consegna."
+    role: "Application security (OWASP Top 10, secrets, injection, authn/authz, supply chain, cryptography)."
+    goal: "Find real vulnerabilities and propose concrete fixes; can block delivery."
     prompt: 09_security.md
     tier: reasoning
     max_tokens: 700
@@ -152,8 +153,8 @@ agents:
     key: performance
     name: "Performance & Optimization"
     stage: gate
-    role: "Profiling, complessità, memoria, I/O, caching, concorrenza, query lente, bundle size."
-    goal: "Rendere il codice misurabilmente più veloce senza sacrificare leggibilità o correttezza."
+    role: "Profiling, complexity, memory, I/O, caching, concurrency, slow queries, bundle size."
+    goal: "Make the code measurably faster without sacrificing readability or correctness."
     prompt: 10_performance.md
     tier: reasoning
     max_tokens: 700
@@ -167,8 +168,8 @@ agents:
     key: research
     name: "Research Agent"
     stage: research
-    role: "Ricerca web in tempo reale (docs ufficiali, versioni, changelog, CVE, issue) con fonti citate."
-    goal: "Fornire fatti aggiornati e verificati con URL; in offline dichiarare il limite e usare la conoscenza locale."
+    role: "Real-time web research (official docs, versions, changelogs, CVEs, issues) with cited sources."
+    goal: "Provide up-to-date, verified facts with URLs; when offline, state the limitation and use local knowledge."
     prompt: 11_research.md
     tier: main
     max_tokens: 700
@@ -182,8 +183,8 @@ agents:
     key: reviewer
     name: "Code Reviewer & Refactor"
     stage: gate
-    role: "Code review del risultato, leggibilità, design, refactor mirati, coerenza col piano."
-    goal: "Decidere APPROVE/REVISE con feedback azionabili e prioritizzati."
+    role: "Code review of the result, readability, design, targeted refactors, consistency with the plan."
+    goal: "Decide APPROVE/REVISE with actionable, prioritized feedback."
     prompt: 12_reviewer.md
     tier: reasoning
     max_tokens: 700
@@ -195,10 +196,10 @@ agents:
 
   - id: 13
     key: docs
-    name: "Documentation & Commenti"
+    name: "Documentation & Comments"
     stage: docs
-    role: "Docstring, README, commenti essenziali, changelog, esempi d'uso."
-    goal: "Documentazione minima ma completa: come si usa, come si configura, perché certe scelte."
+    role: "Docstrings, READMEs, essential comments, changelogs, usage examples."
+    goal: "Minimal but complete documentation: how to use it, how to configure it, why certain choices were made."
     prompt: 13_docs.md
     tier: main
     max_tokens: 900
@@ -212,8 +213,8 @@ agents:
     key: edge_cases
     name: "Edge Case & Robustness"
     stage: gate
-    role: "Casi limite, input invalidi, errori, concorrenza, timezone, unicode, limiti di risorse."
-    goal: "Trovare gli input che rompono il codice e proporre gestione e test mirati."
+    role: "Edge cases, invalid input, errors, concurrency, timezones, unicode, resource limits."
+    goal: "Find the inputs that break the code and propose targeted handling and tests."
     prompt: 14_edge_cases.md
     tier: reasoning
     max_tokens: 600
@@ -227,8 +228,8 @@ agents:
     key: formatter
     name: "Output Formatter & Final Delivery"
     stage: final
-    role: "Consegna finale pulita e pronta all'uso."
-    goal: "Unire il lavoro del team in un'unica risposta concisa con codice completo, comandi e note essenziali."
+    role: "Clean, ready-to-use final delivery."
+    goal: "Merge the team's work into a single concise answer with complete code, commands and essential notes."
     prompt: 15_formatter.md
     tier: main
     max_tokens: 3000

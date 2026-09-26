@@ -1,19 +1,19 @@
-# Bot Discord
+# Discord bot
 
-Bot in Python con discord.py. I comandi sono funzioni con `@bot.command()` in bot.py.
+Python bot with discord.py. Commands are functions decorated with `@bot.command()` in bot.py.
 
-## Comandi
-- installa: `python -m pip install -r requirements.txt`
-- avvio: `python bot.py`
+## Commands
+- install: `python -m pip install -r requirements.txt`
+- run: `python bot.py`
 
-## Prima volta
-1. Su https://discord.com/developers/applications crea un'applicazione, poi nella scheda Bot premi
-   «Reset Token» e copia il token.
-2. Sempre nella scheda Bot attiva «Message Content Intent».
-3. Copia .env.example in .env e incolla il token dopo `DISCORD_TOKEN=` (il file .env non va mai su GitHub).
-4. In OAuth2 → URL Generator scegli `bot` e i permessi «Send Messages», apri il link e invita il bot nel
-   tuo server.
+## First time
+1. On https://discord.com/developers/applications create an application, then in the Bot tab press
+   "Reset Token" and copy the token.
+2. Still in the Bot tab, turn on "Message Content Intent".
+3. Copy .env.example to .env and paste the token after `DISCORD_TOKEN=` (the .env file must never go on GitHub).
+4. In OAuth2 → URL Generator pick `bot` and the "Send Messages" permission, open the link and invite the bot to
+   your server.
 
-## Convenzioni
-- un comando nuovo = una funzione async con `@bot.command()` e una docstring
-- il token si legge solo da .env, mai scritto nel codice
+## Conventions
+- a new command = an async function with `@bot.command()` and a docstring
+- the token is only read from .env, never written in the code

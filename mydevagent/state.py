@@ -1,4 +1,4 @@
-"""Blackboard condivisa dal team e rendering compatto del contesto per ogni agente."""
+"""Blackboard shared by the team, and compact context rendering for each agent."""
 
 from __future__ import annotations
 
@@ -84,7 +84,7 @@ def render_context(
     cfg: ContextConfig,
     extra_reads: tuple[str, ...] = (),
 ) -> str:
-    """Solo le sezioni che l'agente legge (`reads` in agents.yaml) → prompt più corti e veloci."""
+    """Only the sections the agent reads (`reads` in agents.yaml) → shorter, faster prompts."""
     reads = set(agent.reads) | set(extra_reads)
     blocks = []
     for section in ORDER:
@@ -110,7 +110,7 @@ def render_history(messages: list[dict[str, Any]], cfg: ContextConfig) -> str:
     lines = []
     for msg in turns:
         content = msg.get("content") or ""
-        if isinstance(content, list):  # contenuti multimodali: solo le parti testuali
+        if isinstance(content, list):  # multimodal content: text parts only
             content = " ".join(p.get("text", "") for p in content if isinstance(p, dict))
         content = "\n".join(line for line in content.splitlines() if not line.startswith(PROGRESS_MARKER))
         if content.strip():

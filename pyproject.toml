@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mydevagent"
 version = "1.0.0"
-description = "MyDevAgent: assistente di programmazione local-first con 15 agenti specializzati (LangGraph + modelli open-weight)"
+description = "MyDevAgent: local-first coding assistant with 15 specialized agents (LangGraph + open-weight models)"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

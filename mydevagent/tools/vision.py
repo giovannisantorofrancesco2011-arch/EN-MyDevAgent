@@ -1,4 +1,4 @@
-"""Multimodale opzionale: screenshot/mockup → descrizione tecnica per gli agenti (modello tier `vision`)."""
+"""Optional multimodal support: screenshot/mockup → technical description for the agents (`vision` tier model)."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ def image_to_data_url(path: str | Path) -> str:
 
 
 def describe_images(llm, images: list[str], hint: str = "") -> str:
-    """`images`: data URL o URL http(s). Restituisce una descrizione testuale (vuota se fallisce)."""
+    """`images`: data URLs or http(s) URLs. Returns a text description (empty on failure)."""
     if not images:
         return ""
     content: list[dict] = [{"type": "text", "text": VISION_PROMPT + (f"\nUser request: {hint[:500]}" if hint else "")}]

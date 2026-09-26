@@ -1,95 +1,95 @@
-# Velocità ed efficienza dei token
+# Speed and token efficiency
 
-Obiettivo: **1–3 s** per le richieste semplici su 7B/14B in GPU, e pipeline multi-agente che costano il
-meno possibile. Ecco cosa fa già MyDevAgent e cosa puoi regolare.
+Goal: **1–3 s** for simple requests on 7B/14B on GPU, and multi-agent pipelines that cost as little
+as possible. Here's what MyDevAgent already does and what you can tune.
 
-## Cosa è già attivo
+## What's already on
 
-| Tecnica | Dove | Effetto |
+| Technique | Where | Effect |
 |---|---|---|
-| Router euristico (0 token, <1 ms) | `router.py` | la maggior parte delle domande va in **fast = 1 sola chiamata LLM** |
-| Formatter fuso in fast | `graph.py → system_prompt(fused_delivery=True)` | niente seconda chiamata per "riformattare" |
-| Blackboard con `reads` per agente | `state.py`, `agents.yaml` | ogni agente riceve solo le sezioni utili (−50/80% token di input) |
-| Prefisso stabile (persona → ruolo) | `Team.system_prompt` | la KV/prefix cache del server riusa la persona tra agenti e richieste |
-| `max_tokens` per agente | `agents.yaml` | i quality gate rispondono in ~100–300 token |
-| Specialisti e gate in parallelo | `Send` di LangGraph | latenza ≈ agente più lento, non la somma |
-| `<think>` rimosso dalla blackboard | `reasoning.strip_thinking` | il ragionamento non viene rimandato agli altri agenti |
-| Thinking solo in deep e solo per tier `reasoning` | `modes.*.think` | `/no_think` (Qwen3) o `Reasoning: low` (gpt-oss) nelle altre modalità |
-| Ricerca in fast senza LLM | `orchestrator.run` | risultati iniettati direttamente nel contesto |
-| Codice incollato non gonfia la modalità | `router.prose_length` | un traceback lungo resta in fast |
-| Streaming end-to-end | CLI + server SSE | primo token visibile subito |
+| Heuristic router (0 tokens, <1 ms) | `router.py` | most questions go to **fast = a single LLM call** |
+| Formatter merged in fast | `graph.py → system_prompt(fused_delivery=True)` | no second call to "reformat" |
+| Blackboard with per-agent `reads` | `state.py`, `agents.yaml` | each agent receives only the useful sections (−50/80% input tokens) |
+| Stable prefix (persona → role) | `Team.system_prompt` | the server's KV/prefix cache reuses the persona across agents and requests |
+| Per-agent `max_tokens` | `agents.yaml` | the quality gates answer in ~100–300 tokens |
+| Specialists and gates in parallel | LangGraph `Send` | latency ≈ slowest agent, not the sum |
+| `<think>` removed from the blackboard | `reasoning.strip_thinking` | the reasoning isn't passed on to other agents |
+| Thinking only in deep and only for the `reasoning` tier | `modes.*.think` | `/no_think` (Qwen3) or `Reasoning: low` (gpt-oss) in the other modes |
+| Search in fast without an LLM | `orchestrator.run` | results injected directly into the context |
+| Pasted code doesn't inflate the mode | `router.prose_length` | a long traceback stays in fast |
+| End-to-end streaming | CLI + SSE server | first token visible right away |
 
-### Modalità agente
-| Tecnica | Effetto |
+### Agent mode
+| Technique | Effect |
 |---|---|
-| **Warmup** all'apertura della UI (richiesta da 1 token in background) | la prima domanda non paga 5–20 s di caricamento del modello |
-| System prompt fisso per tutto il turno (persona → ruolo → memoria → repo map → regole → tool) | ogni passo del ciclo riusa la prefix cache del server |
-| Output dei tool troncato in mezzo (prime/ultime righe) e `read_file` a finestre | contesto piccolo anche su file e log lunghi |
-| Risultati dei tool più vecchi svuotati quando il contesto supera `num_ctx × 3` caratteri | niente overflow di contesto nei task lunghi |
-| Prompt di ruolo compatto in modalità agente | meno token e meno confusione per i modelli piccoli |
-| Messaggio "tests pass → fermati" dopo test verdi | i modelli piccoli non fanno giri inutili |
+| **Warmup** when the UI opens (1-token request in the background) | the first question doesn't pay 5–20 s of model loading |
+| Fixed system prompt for the whole turn (persona → role → memory → repo map → rules → tools) | every loop step reuses the server's prefix cache |
+| Tool output truncated in the middle (first/last lines) and windowed `read_file` | small context even on long files and logs |
+| Older tool results emptied when the context exceeds `num_ctx × 3` characters | no context overflow on long tasks |
+| Compact role prompt in agent mode | fewer tokens and less confusion for small models |
+| "tests pass → stop" message after green tests | small models don't do pointless extra rounds |
 
-## Misurare: `mydevagent bench`
+## Measuring: `mydevagent bench`
 ```bash
-mydevagent bench                     # primo token e token/s di main e fast, con consiglio sul profilo
+mydevagent bench                     # first token and tokens/s for main and fast, with a profile suggestion
 mydevagent bench --tiers main,reasoning
 ```
-Esempio misurato nel container di sviluppo (solo CPU, nessuna GPU): `qwen2.5-coder:1.5b` → primo token
-0,5 s, ~14 token/s; `qwen2.5-coder:0.5b` → ~29 token/s. Su una GPU da 8 GB un 7B Q4 fa tipicamente
-40–80 token/s. Con la sola CPU la modalità agente funziona ma ogni passo richiede decine di secondi:
-usa `/fast`, un modello 3B o una GPU.
+Example measured in the development container (CPU only, no GPU): `qwen2.5-coder:1.5b` → first token
+0.5 s, ~14 tokens/s; `qwen2.5-coder:0.5b` → ~29 tokens/s. On an 8 GB GPU a 7B Q4 typically does
+40–80 tokens/s. With CPU only, agent mode works but each step takes tens of seconds:
+use `/fast`, a 3B model or a GPU.
 
-## Server: le impostazioni che contano di più
+## Server: the settings that matter most
 
 ### Ollama
 ```bash
-export OLLAMA_FLASH_ATTENTION=1        # meno memoria e più velocità su contesti lunghi
-export OLLAMA_KV_CACHE_TYPE=q8_0       # KV cache a 8 bit: metà VRAM, qualità ~identica
-export OLLAMA_KEEP_ALIVE=30m           # il modello resta caricato (niente 5–20 s di reload)
-export OLLAMA_NUM_PARALLEL=3           # agenti in parallelo sullo stesso modello
-export OLLAMA_CONTEXT_LENGTH=16384     # contesto di default per i modelli non creati da Modelfile
-export OLLAMA_MAX_LOADED_MODELS=2      # main + fast insieme se la VRAM lo consente
+export OLLAMA_FLASH_ATTENTION=1        # less memory and more speed on long contexts
+export OLLAMA_KV_CACHE_TYPE=q8_0       # 8-bit KV cache: half the VRAM, ~identical quality
+export OLLAMA_KEEP_ALIVE=30m           # the model stays loaded (no 5–20 s reload)
+export OLLAMA_NUM_PARALLEL=3           # agents in parallel on the same model
+export OLLAMA_CONTEXT_LENGTH=16384     # default context for models not created from a Modelfile
+export OLLAMA_MAX_LOADED_MODELS=2      # main + fast together if VRAM allows
 ```
-(Windows: impostale come variabili d'ambiente utente e riavvia Ollama.)
+(Windows: set them as user environment variables and restart Ollama.)
 
-### llama.cpp (il più efficiente su GPU piccole e Apple Silicon) — [`deploy/llamacpp.sh`](../deploy/llamacpp.sh)
-- `--cache-reuse 256` → riuso del prefisso tra richieste
-- `-hfd <draft 0.5B>` → **speculative decoding**: 1.5–2.5× sul codice (molto prevedibile)
+### llama.cpp (the most efficient on small GPUs and Apple Silicon) — [`deploy/llamacpp.sh`](../deploy/llamacpp.sh)
+- `--cache-reuse 256` → prefix reuse across requests
+- `-hfd <draft 0.5B>` → **speculative decoding**: 1.5–2.5× on code (very predictable)
 - `-ctk q8_0 -ctv q8_0`, `--flash-attn on`, `-np 3`
 
-### vLLM (massimo throughput con tanti agenti in parallelo) — [`deploy/vllm.sh`](../deploy/vllm.sh)
-- `--enable-prefix-caching`, `--speculative-config` con draft 0.5B, modelli AWQ/FP8
+### vLLM (maximum throughput with many agents in parallel) — [`deploy/vllm.sh`](../deploy/vllm.sh)
+- `--enable-prefix-caching`, `--speculative-config` with a 0.5B draft, AWQ/FP8 models
 
-## Scelte di modello
+## Model choices
 
-| Hardware | Consiglio | Perché |
+| Hardware | Recommendation | Why |
 |---|---|---|
-| CPU / 8 GB RAM | `qwen2.5-coder:3b` (main) | ~10–20 tok/s su CPU moderna |
-| GPU 8 GB | `qwen2.5-coder:7b` Q4_K_M | ~40–80 tok/s, entra con 16k di contesto |
-| GPU 12–16 GB | `qwen2.5-coder:14b` | salto di qualità netto, ancora veloce |
-| GPU 24 GB | `qwen3-coder:30b` (MoE, ~3B attivi) | qualità da 30B a velocità da ~3B |
-| Apple Silicon 32 GB+ | `qwen3-coder:30b` con llama.cpp/MLX | la memoria unificata regge il MoE intero |
+| CPU / 8 GB RAM | `qwen2.5-coder:3b` (main) | ~10–20 tok/s on a modern CPU |
+| 8 GB GPU | `qwen2.5-coder:7b` Q4_K_M | ~40–80 tok/s, fits with 16k context |
+| 12–16 GB GPU | `qwen2.5-coder:14b` | clear jump in quality, still fast |
+| 24 GB GPU | `qwen3-coder:30b` (MoE, ~3B active) | 30B quality at ~3B speed |
+| Apple Silicon 32 GB+ | `qwen3-coder:30b` with llama.cpp/MLX | unified memory holds the whole MoE |
 
-Regole pratiche:
-- **Stesso modello per `main` e `reasoning`** se non ti basta la VRAM per due: gli swap costano secondi.
-- Quantizzazione: Q4_K_M è il miglior compromesso; Q5_K_M/Q6_K se hai margine; evita < Q4 per il codice.
-- Autocomplete: sempre un modello **base** piccolo (`qwen2.5-coder:1.5b-base`), mai il team.
-- I nomi dei modelli evolvono in fretta: quando esce un coder open-weight migliore basta cambiare
-  il tag in `config/settings.yaml` (o `MYDEVAGENT_MODEL_MAIN=...`).
+Rules of thumb:
+- **Same model for `main` and `reasoning`** if you don't have enough VRAM for two: swaps cost seconds.
+- Quantization: Q4_K_M is the best trade-off; Q5_K_M/Q6_K if you have headroom; avoid < Q4 for code.
+- Autocomplete: always a small **base** model (`qwen2.5-coder:1.5b-base`), never the team.
+- Model names change fast: when a better open-weight coder comes out, just change
+  the tag in `config/settings.yaml` (or `MYDEVAGENT_MODEL_MAIN=...`).
 
-## Regolazioni in `config/settings.yaml`
+## Tuning in `config/settings.yaml`
 
-| Voglio… | Modifica |
+| I want… | Change |
 |---|---|
-| più risposte in fast | `router.fast_max_chars: 600` |
-| sempre veloce | `router.default_mode: fast` |
-| meno giri di revisione | `modes.balanced.max_review_rounds: 0` |
-| meno gate in deep | `modes.deep.gate: [security, reviewer]` |
-| contesti più corti | `context.max_section_chars: 3000`, `context.history_turns: 2` |
-| meno output per agente | abbassa `max_tokens` in `agents.yaml` |
-| nessuna lettura di pagine web | `tools.web.fetch_top_n: 0` |
+| more answers in fast | `router.fast_max_chars: 600` |
+| always fast | `router.default_mode: fast` |
+| fewer review rounds | `modes.balanced.max_review_rounds: 0` |
+| fewer gates in deep | `modes.deep.gate: [security, reviewer]` |
+| shorter contexts | `context.max_section_chars: 3000`, `context.history_turns: 2` |
+| less output per agent | lower `max_tokens` in `agents.yaml` |
+| no web page reading | `tools.web.fetch_top_n: 0` |
 
-## Misurare
-Ogni risposta termina (CLI) con `modalità · N agenti · secondi · ~token`; gli eventi `agent_end`
-riportano ms e token per agente. Prova la stessa richiesta con `/fast` e `/deep` per vedere il costo
-di ogni fase.
+## Measuring
+Every answer ends (CLI) with `mode · N agents · seconds · ~tokens`; the `agent_end` events
+report ms and tokens per agent. Try the same request with `/fast` and `/deep` to see the cost
+of each phase.

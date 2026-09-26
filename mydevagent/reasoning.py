@@ -1,4 +1,4 @@
-"""Ragionamento step-by-step: scaffold per modalità, gestione dei blocchi <think> e parsing."""
+"""Step-by-step reasoning: per-mode scaffolds, <think> block handling and parsing."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 
 THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL | re.IGNORECASE)
-CODE_BLOCK_RE = re.compile(r"```([^\n`]*)\n(.*?)(?:```|\Z)", re.DOTALL)  # \Z: blocco troncato
+CODE_BLOCK_RE = re.compile(r"```([^\n`]*)\n(.*?)(?:```|\Z)", re.DOTALL)  # \Z: truncated block
 ISSUE_RE = re.compile(r"^\s*[-*]\s*\[(BLOCKER|MAJOR|MINOR)\]\s*(.+)$", re.IGNORECASE | re.MULTILINE)
 VERDICT_RE = re.compile(r"VERDICT\s*:\s*(APPROVE|REVISE)", re.IGNORECASE)
 
@@ -22,10 +22,10 @@ SCAFFOLD_DEEP = (
 
 
 def effort_directive(model: str, think: bool) -> str:
-    """Direttive specifiche per famiglie di modelli con reasoning attivabile.
+    """Directives for model families whose reasoning can be toggled.
 
-    - Qwen3 (non-coder): `/think` e `/no_think` accendono/spengono il thinking.
-    - gpt-oss: "Reasoning: low|high" nel system prompt.
+    - Qwen3 (non-coder): `/think` and `/no_think` turn thinking on/off.
+    - gpt-oss: "Reasoning: low|high" in the system prompt.
     """
     name = model.lower()
     if name.startswith("qwen3") and "coder" not in name:
@@ -40,18 +40,18 @@ def scaffold(think: bool) -> str:
 
 
 def strip_thinking(text: str) -> str:
-    """Rimuove i blocchi <think>…</think> (anche se non chiusi) dall'output."""
+    """Removes <think>…</think> blocks (even unclosed ones) from the output."""
     text = THINK_RE.sub("", text)
     lower = text.lower()
-    if "<think>" in lower:  # blocco non chiuso (output troncato): scarta dal tag in poi
+    if "<think>" in lower:  # unclosed block (truncated output): drop everything from the tag on
         text = text[: lower.index("<think>")]
-    if "</think>" in text.lower():  # alcuni template omettono il tag di apertura
+    if "</think>" in text.lower():  # some templates omit the opening tag
         text = text[text.lower().rindex("</think>") + len("</think>") :]
     return text.strip()
 
 
 class ThinkFilter:
-    """Filtro in streaming che nasconde il contenuto tra <think> e </think>."""
+    """Streaming filter that hides the content between <think> and </think>."""
 
     OPEN, CLOSE = "<think>", "</think>"
 
@@ -76,7 +76,7 @@ class ThinkFilter:
                 if not self.inside:
                     self.buffer = self.buffer.lstrip()
                 continue
-            # tiene in buffer un possibile tag spezzato tra due chunk
+            # keep in the buffer a tag that may be split across two chunks
             keep = _partial_suffix(self.buffer.lower(), tag)
             emit, self.buffer = self.buffer[: len(self.buffer) - keep], self.buffer[len(self.buffer) - keep :]
             if not self.inside:
@@ -116,7 +116,7 @@ class CodeBlock:
 
     @property
     def path(self) -> str | None:
-        """Percorso del file: info string → commento in prima riga → percorso citato subito prima del blocco."""
+        """File path: info string → first-line comment → path mentioned right before the block."""
         match = re.search(r"(?:file|path|title)\s*=\s*[\"']?([^\s\"']+)", self.info)
         if match:
             return match.group(1)
@@ -135,7 +135,7 @@ class CodeBlock:
 
 
 def _split_multi_file(block: CodeBlock) -> list[CodeBlock]:
-    """Divide un blocco che contiene più file marcati da commenti (`# app/a.py` … `# tests/test_a.py`)."""
+    """Splits a block holding several files marked by comments (`# app/a.py` … `# tests/test_a.py`)."""
     if re.search(r"(?:file|path|title)\s*=", block.info) or block.is_run:
         return [block]
     lines = block.body.split("\n")
@@ -175,7 +175,7 @@ class Review:
 
 
 def parse_review(text: str) -> Review:
-    """Parsing dell'output dei quality gate (VERDICT + lista di issue con severità)."""
+    """Parses the quality gates' output (VERDICT + list of issues with severity)."""
     text = strip_thinking(text)
     issues = [(sev.upper(), body.strip()) for sev, body in ISSUE_RE.findall(text)]
     match = VERDICT_RE.search(text)
@@ -183,7 +183,7 @@ def parse_review(text: str) -> Review:
         verdict = match.group(1).upper()
     else:
         verdict = "REVISE" if any(sev == "BLOCKER" for sev, _ in issues) else "APPROVE"
-    # Un APPROVE con BLOCKER è incoerente: vince la severità.
+    # An APPROVE with a BLOCKER is inconsistent: severity wins.
     if any(sev == "BLOCKER" for sev, _ in issues):
         verdict = "REVISE"
     return Review(verdict=verdict, issues=issues)

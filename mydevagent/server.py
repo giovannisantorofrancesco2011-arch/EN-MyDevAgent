@@ -1,6 +1,6 @@
-"""Server compatibile OpenAI: espone il team come modello `mydevagent` per IDE e tool esterni.
+"""OpenAI-compatible server: exposes the team as the `mydevagent` model for IDEs and external tools.
 
-    POST /v1/chat/completions   (stream e non-stream)
+    POST /v1/chat/completions   (stream and non-stream)
     GET  /v1/models             mydevagent | mydevagent-fast | mydevagent-balanced | mydevagent-deep
     GET  /health
 """
@@ -28,7 +28,7 @@ MODELS = {
 
 
 def split_messages(messages: list[dict[str, Any]]) -> tuple[str, list[str], list[dict[str, Any]]]:
-    """→ (testo dell'ultima richiesta utente, immagini, storia precedente senza messaggi di sistema)."""
+    """→ (text of the last user request, images, previous history without system messages)."""
     last_user = max((i for i, m in enumerate(messages) if m.get("role") == "user"), default=-1)
     if last_user < 0:
         return "", [], []

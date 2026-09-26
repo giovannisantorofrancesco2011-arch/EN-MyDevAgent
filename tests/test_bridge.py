@@ -17,7 +17,7 @@ from tests.test_agent import ScriptedLLM, T
 
 
 class Wire:
-    """Lo stdout del ponte: raccoglie le righe JSON e aspetta quelle che servono ai test."""
+    """The bridge's stdout: collects the JSON lines and waits for the ones the tests need."""
 
     def __init__(self) -> None:
         self.lines: queue.Queue = queue.Queue()
@@ -40,7 +40,7 @@ class Wire:
             self.seen.append(msg)
             if (method and msg.get("method") == method) or (id is not None and msg.get("id") == id):
                 return msg
-        raise AssertionError(f"nessun messaggio {method or id}: {self.seen[-5:]}")
+        raise AssertionError(f"no message {method or id}: {self.seen[-5:]}")
 
 
 @pytest.fixture
@@ -71,55 +71,55 @@ def test_hello_and_settings(settings, project):
     assert hello["agents"]["architect"]
     assert call(bridge, wire, 2, "set", team="fast", permission="auto-edit")["result"]["team"] == "fast"
     assert bridge.policy.mode == "auto-edit"
-    assert "sconosciuta" in call(bridge, wire, 3, "set", permission="boh")["error"]["message"]
-    assert "metodo sconosciuto" in call(bridge, wire, 4, "../etc")["error"]["message"]
+    assert "unknown mode" in call(bridge, wire, 3, "set", permission="nope")["error"]["message"]
+    assert "unknown method" in call(bridge, wire, 4, "../etc")["error"]["message"]
 
 
 def test_agent_turn_with_approval_diff_and_undo(settings, project):
-    llm = ScriptedLLM(steps=[T("edit_file", path="src/calc.py", old_string="a + b", new_string="a + b  # somma"),
-                             "Ho aggiunto un commento a src/calc.py"])
+    llm = ScriptedLLM(steps=[T("edit_file", path="src/calc.py", old_string="a + b", new_string="a + b  # sum"),
+                             "I added a comment to src/calc.py"])
     bridge, wire = make(settings, project, llm)
     call(bridge, wire, 1, "hello")
-    started = call(bridge, wire, 2, "prompt", text="/fast commenta la somma",
+    started = call(bridge, wire, 2, "prompt", text="/fast comment the sum",
                    context={"file": "src/calc.py", "selection": {"text": "a + b", "start": 2, "end": 2}})
     turn = started["result"]["turn"]
-    busy = call(bridge, wire, 3, "prompt", text="altro")
-    assert "già lavorando" in busy["error"]["message"]
+    busy = call(bridge, wire, 3, "prompt", text="something else")
+    assert "already working" in busy["error"]["message"]
     ask = wire.wait("approval")["params"]
     assert ask["tool"] == "edit_file" and ask["path"] == "src/calc.py" and ask["turn"] == turn
-    assert ask["before"] == "def add(a, b):\n    return a + b\n" and ask["after"].endswith("# somma\n")
-    assert "+    return a + b  # somma" in ask["diff"]
+    assert ask["before"] == "def add(a, b):\n    return a + b\n" and ask["after"].endswith("# sum\n")
+    assert "+    return a + b  # sum" in ask["diff"]
     assert call(bridge, wire, 4, "approval_reply", request=ask["request"], answer="yes")["result"]["ok"]
     diff = wire.wait("event")
     while diff["params"]["event"]["type"] != "diff":
         diff = wire.wait("event")
     end = wire.wait("turn_end")["params"]
     assert end["turn"] == turn and not end["cancelled"] and end["error"] is None
-    assert end["files"] == ["src/calc.py"] and "commento" in end["answer"]
-    assert "# somma" in (project / "src" / "calc.py").read_text()
+    assert end["files"] == ["src/calc.py"] and "comment" in end["answer"]
+    assert "# sum" in (project / "src" / "calc.py").read_text()
     task = next(c for c in llm.calls if c["role"] == "agent")["messages"][-1]["content"]
-    assert "righe 2-2 selezionate" in task and "a + b" in task  # il contesto dell'editor arriva all'agente
+    assert "lines 2-2 selected" in task and "a + b" in task  # the editor context reaches the agent
     [record] = stats.load()
     assert record["source"] == "studio" and record["files"] == ["src/calc.py"]
-    assert bridge.session.history[0]["content"] == "/fast commenta la somma"
-    assert "+    return a + b  # somma" in call(bridge, wire, 5, "diff")["result"]["diff"]
+    assert bridge.session.history[0]["content"] == "/fast comment the sum"
+    assert "+    return a + b  # sum" in call(bridge, wire, 5, "diff")["result"]["diff"]
     undone = call(bridge, wire, 6, "undo")["result"]
-    assert undone["files"] == ["src/calc.py"] and "# somma" not in (project / "src" / "calc.py").read_text()
+    assert undone["files"] == ["src/calc.py"] and "# sum" not in (project / "src" / "calc.py").read_text()
 
 
 def test_rejected_and_cancelled_turns(settings, project):
-    llm = ScriptedLLM(steps=[T("write_file", path="src/new.py", content="X = 1\n"), "Ok, non lo creo",
+    llm = ScriptedLLM(steps=[T("write_file", path="src/new.py", content="X = 1\n"), "Ok, I won't create it",
                              T("write_file", path="src/new.py", content="X = 2\n")])
     bridge, wire = make(settings, project, llm)
-    call(bridge, wire, 1, "prompt", text="/fast crea src/new.py")
+    call(bridge, wire, 1, "prompt", text="/fast create src/new.py")
     ask = wire.wait("approval")["params"]
-    assert ask["before"] is None and ask["after"] == "X = 1\n"  # file nuovo
-    call(bridge, wire, 2, "approval_reply", request=ask["request"], answer="no", feedback="chiamalo nuovo.py")
+    assert ask["before"] is None and ask["after"] == "X = 1\n"  # new file
+    call(bridge, wire, 2, "approval_reply", request=ask["request"], answer="no", feedback="call it fresh.py")
     wire.wait("turn_end")
     assert not (project / "src" / "new.py").exists()
     second = [c for c in llm.calls if c["role"] == "agent"][1]
-    assert any("chiamalo nuovo.py" in str(m.get("content")) for m in second["messages"])
-    call(bridge, wire, 3, "prompt", text="/fast riprova")
+    assert any("call it fresh.py" in str(m.get("content")) for m in second["messages"])
+    call(bridge, wire, 3, "prompt", text="/fast try again")
     wire.wait("approval")
     assert call(bridge, wire, 4, "cancel")["result"]["cancelled"]
     end = wire.wait("turn_end")["params"]
@@ -129,25 +129,25 @@ def test_rejected_and_cancelled_turns(settings, project):
 
 def test_commands_are_expanded(settings, project):
     (project / ".mydevagent" / "commands").mkdir(parents=True)
-    (project / ".mydevagent" / "commands" / "saluta.md").write_text("description: saluta\nDì ciao a $ARGUMENTS")
+    (project / ".mydevagent" / "commands" / "greet.md").write_text("description: greet\nSay hi to $ARGUMENTS")
     bridge, _ = make(settings, project, FakeLLM())
-    assert bridge._expand("/saluta Gio") == "Dì ciao a Gio"
+    assert bridge._expand("/greet Gio") == "Say hi to Gio"
     assert bridge._expand("/init") == extras.INIT_TASK
-    assert bridge._expand("ciao") == "ciao"
+    assert bridge._expand("hello") == "hello"
     with pytest.raises(ValueError):
-        bridge._expand("/skill inesistente fai")
-    assert {"name": "/saluta", "description": "saluta"} in bridge._commands()
+        bridge._expand("/skill missing do-it")
+    assert {"name": "/greet", "description": "greet"} in bridge._commands()
 
 
 def test_inline_edit_returns_only_code(settings, project):
-    llm = FakeLLM(responses={"unknown": "Ecco:\n```python\ndef add(a: int, b: int) -> int:\n    return a + b\n```"})
+    llm = FakeLLM(responses={"unknown": "Here you go:\n```python\ndef add(a: int, b: int) -> int:\n    return a + b\n```"})
     bridge, wire = make(settings, project, llm)
     result = call(bridge, wire, 1, "inline_edit", path="src/calc.py", language="python", before="",
-                  selection="def add(a, b):\n    return a + b\n", after="", instruction="aggiungi i tipi")
+                  selection="def add(a, b):\n    return a + b\n", after="", instruction="add the types")
     assert result["result"]["text"] == "def add(a: int, b: int) -> int:\n    return a + b\n"
     prompt = llm.calls[0]["messages"][1]["content"]
-    assert "aggiungi i tipi" in prompt and "Selected code" in prompt
-    assert inline_code("<think>boh</think>x = 1", "y = 2") == "x = 1"
+    assert "add the types" in prompt and "Selected code" in prompt
+    assert inline_code("<think>hmm</think>x = 1", "y = 2") == "x = 1"
 
 
 def test_fim_prompt_clean_and_ollama_request(settings):
@@ -156,9 +156,9 @@ def test_fim_prompt_clean_and_ollama_request(settings):
     assert "<|endoftext|>" in stop
     assert fim.template("deepseek-coder:1.3b")[0] == "<｜fim▁begin｜>"
     assert fim.clean("a + b<|endoftext|>garbage", "", stop) == "a + b"
-    assert fim.clean("print(x)", ")\n", stop) == "print(x"  # la ")" c'era già dopo il cursore
-    assert fim.clean("x = 1", "1 + 2", stop) == "x = 1"  # non taglia il codice vero
-    assert fim.clean("total = a + b", "a + b", stop) == "total ="  # ha riscritto il resto della riga
+    assert fim.clean("print(x)", ")\n", stop) == "print(x"  # the ")" was already after the cursor
+    assert fim.clean("x = 1", "1 + 2", stop) == "x = 1"  # doesn't cut real code
+    assert fim.clean("total = a + b", "a + b", stop) == "total ="  # it rewrote the rest of the line
 
     seen = {}
 
@@ -176,8 +176,8 @@ def test_fim_prompt_clean_and_ollama_request(settings):
 
 
 def test_stats_method(settings, project):
-    bridge, wire = make(settings, project, ScriptedLLM(steps=["Fatto."]))
-    call(bridge, wire, 1, "prompt", text="/fast ciao")
+    bridge, wire = make(settings, project, ScriptedLLM(steps=["Done."]))
+    call(bridge, wire, 1, "prompt", text="/fast hello")
     wire.wait("turn_end")
     result = call(bridge, wire, 2, "stats")["result"]
     assert result["session"]["turns"] == 1 and result["history"]["turns"] == 1 and result["history"]["streak"] == 1
@@ -189,6 +189,6 @@ def test_bridge_process_keeps_stdout_clean(tmp_path):
     messages = [{"id": 1, "method": "hello", "params": {}}, {"id": 2, "method": "shutdown", "params": {}}]
     proc = subprocess.run([sys.executable, "-m", "mydevagent.cli", "bridge"], cwd=tmp_path, env=env, timeout=60,
                           input="".join(json.dumps(m) + "\n" for m in messages).encode(), capture_output=True)
-    lines = [json.loads(line) for line in proc.stdout.decode().splitlines()]  # solo JSON, niente altro
+    lines = [json.loads(line) for line in proc.stdout.decode().splitlines()]  # only JSON, nothing else
     assert lines[0]["method"] == "ready" and lines[1]["id"] == 1 and lines[2] == {"id": 2, "result": {"ok": True}}
     assert proc.returncode == 0

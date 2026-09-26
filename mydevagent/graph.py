@@ -1,10 +1,10 @@
-"""Il team dei 15 agenti orchestrato con LangGraph.
+"""The team of 15 agents, orchestrated with LangGraph.
 
-    START ─▶ research? ─▶ architect ─▶ specialist × N (parallelo) ─▶ join ─▶ test ─▶ gate × M (parallelo)
+    START ─▶ research? ─▶ architect ─▶ specialist × N (parallel) ─▶ join ─▶ test ─▶ gate × M (parallel)
                                              ▲                                              │
                                              └────────── revise (max_review_rounds) ◀── judge ─▶ docs? ─▶ END
 
-Il Formatter (agente 15) viene eseguito dall'orchestratore dopo il grafo, in streaming.
+The Formatter (agent 15) is run by the orchestrator after the graph, streaming.
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ EventHandler = Callable[[dict[str, Any]], None]
 
 
 class Cancelled(Exception):
-    """L'utente ha interrotto la richiesta (es. Ctrl+C nella UI)."""
+    """The user interrupted the request (e.g. Ctrl+C in the UI)."""
 
 
 class Team:
@@ -54,7 +54,7 @@ class Team:
         return self.settings.mode(mode).think and agent.tier == "reasoning"
 
     def system_prompt(self, agent: Agent, *, think: bool, fused_delivery: bool = False) -> str:
-        """Persona (prefisso stabile → prefix cache) + prompt di ruolo + scaffold di ragionamento."""
+        """Persona (stable prefix → prefix cache) + role prompt + reasoning scaffold."""
         parts = [self.registry.persona, agent.prompt]
         if fused_delivery:
             formatter = self.registry["formatter"].prompt
@@ -97,7 +97,7 @@ class Team:
                                            temperature=agent.temperature)
             text = strip_thinking(result.text)
             error = None
-        except Exception as exc:  # un agente che fallisce non blocca il team
+        except Exception as exc:  # a failing agent does not block the team
             result, text, error = Completion(text=""), "", f"{type(exc).__name__}: {exc}"
         entry = {
             "agent": key,
@@ -111,7 +111,7 @@ class Team:
         return text, entry
 
     def _tool_executor(self, agent_key: str):
-        """Esegue un tool emettendo eventi (la UI li mostra come ⏺ tool(args) / ⎿ risultato)."""
+        """Runs a tool and emits events (the UI shows them as ⏺ tool(args) / ⎿ result)."""
 
         def execute(name: str, args: dict[str, Any]) -> str:
             self.emit({"type": "tool_call", "agent": agent_key, "tool": name, "args": args})
@@ -195,7 +195,7 @@ class Team:
         if run_blocks:
             code, lang = run_blocks[0].body, run_blocks[0].lang or "python"
         elif any(p.endswith(".py") and p.rsplit("/", 1)[-1].startswith("test") for p in files):
-            code, lang = FALLBACK_PY_RUNNER, "python"  # nessun self-check: esegue i test scritti
+            code, lang = FALLBACK_PY_RUNNER, "python"  # no self-check: run the tests that were written
         else:
             update["test_report"] = "NOT RUN: no self-check script provided."
             return update
@@ -326,10 +326,10 @@ sys.exit(1 if failed else 0)
 
 
 def collect_files(artifacts: dict[str, str], registry: AgentRegistry) -> dict[str, str]:
-    """Estrae i file dagli artefatti, in ordine di id agente (l'ultimo vince).
+    """Extracts the files from the artifacts, in agent-id order (the last one wins).
 
-    Blocchi senza percorso ricevono un nome di fallback (`main.py`, `main_2.py`, …) così il codice
-    resta eseguibile in sandbox anche quando un modello piccolo non rispetta la convenzione `file=`.
+    Blocks without a path get a fallback name (`main.py`, `main_2.py`, …) so the code stays
+    runnable in the sandbox even when a small model ignores the `file=` convention.
     """
     files: dict[str, str] = {}
     order = {a.key: a.id for a in registry}

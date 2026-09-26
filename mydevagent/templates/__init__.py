@@ -1,7 +1,7 @@
-"""Progetti pronti per /new: ogni cartella qui accanto è un modello, copiato così com'è.
+"""Ready-made projects for /new: each folder next to this file is a template, copied as is.
 
-I file con il punto davanti (.gitignore, .env.example) qui si chiamano senza punto, così finiscono anche
-nel pacchetto pip: /new li rinomina."""
+Files that start with a dot (.gitignore, .env.example) are stored here without the dot, so they also end up
+in the pip package: /new renames them."""
 
 from __future__ import annotations
 
@@ -13,11 +13,11 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = {
-    "sito": "sito web con HTML, CSS e JavaScript (non serve installare niente)",
-    "gioco": "gioco 2D con Pygame: acchiappa le stelle",
-    "bot-discord": "bot Discord con i comandi !ciao e !dado",
-    "api": "API web con FastAPI, con i test",
-    "python": "programma Python con i test, per iniziare",
+    "website": "website with HTML, CSS and JavaScript (nothing to install)",
+    "game": "2D game with Pygame: catch the stars",
+    "bot-discord": "Discord bot with the !hello and !dice commands",
+    "api": "web API with FastAPI, with tests",
+    "python": "Python program with tests, to get started",
 }
 DOTFILES = {"gitignore": ".gitignore", "env.example": ".env.example"}
 
@@ -27,12 +27,12 @@ def _is_empty(folder: Path) -> bool:
 
 
 def target_for(root: Path, template: str, name: str = "") -> Path:
-    """Dove creare il progetto: nella cartella aperta se è vuota, altrimenti in una sottocartella nuova.
-    Mai dentro la cartella di MyDevAgent: lì il progetto va accanto."""
+    """Where to create the project: in the open folder if it is empty, otherwise in a new subfolder.
+    Never inside the MyDevAgent folder: there the project goes next to it."""
     from ..update import HOME
 
     if name and not re.fullmatch(r"[\w][\w.-]*", name):
-        raise ValueError(f"nome non valido: {name} (usa lettere, numeri, - e _)")
+        raise ValueError(f"invalid name: {name} (use letters, digits, - and _)")
     root = root.resolve()
     if root == HOME:
         root = root.parent
@@ -41,7 +41,7 @@ def target_for(root: Path, template: str, name: str = "") -> Path:
     if name:
         dest = root / name
         if dest.exists() and not _is_empty(dest):
-            raise ValueError(f"la cartella {dest} esiste già e non è vuota: scegli un altro nome")
+            raise ValueError(f"the folder {dest} already exists and is not empty: pick another name")
         return dest
     dest, n = root / template, 2
     while dest.exists() and not _is_empty(dest):
@@ -50,10 +50,10 @@ def target_for(root: Path, template: str, name: str = "") -> Path:
 
 
 def create(template: str, dest: Path) -> list[str]:
-    """Copia il modello in `dest` (e fa `git init` se git c'è). Restituisce i file creati."""
+    """Copies the template into `dest` (and runs `git init` if git is available). Returns the files created."""
     source = HERE / template
     if template not in TEMPLATES or not source.is_dir():
-        raise ValueError(f"modello sconosciuto: {template}")
+        raise ValueError(f"unknown template: {template}")
     dest.mkdir(parents=True, exist_ok=True)
     created = []
     for path in sorted(source.rglob("*")):
@@ -65,6 +65,6 @@ def create(template: str, dest: Path) -> list[str]:
         shutil.copyfile(path, dest / rel)
         created.append(rel.as_posix())
     if not (dest / ".git").exists():
-        with contextlib.suppress(OSError, subprocess.TimeoutExpired):  # senza git funziona lo stesso
+        with contextlib.suppress(OSError, subprocess.TimeoutExpired):  # works without git too
             subprocess.run(["git", "init", "-q"], cwd=dest, capture_output=True, timeout=20)
     return created

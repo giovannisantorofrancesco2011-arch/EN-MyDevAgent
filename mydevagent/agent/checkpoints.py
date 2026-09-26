@@ -1,4 +1,4 @@
-"""Checkpoint dei file prima di ogni modifica → /undo e /rewind anche senza git."""
+"""File checkpoints before every edit → /undo and /rewind even without git."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ class Checkpoint:
     id: int
     label: str
     created: float
-    files: dict[str, bool]  # percorso relativo → esisteva prima della modifica?
+    files: dict[str, bool]  # relative path → did it exist before the edit?
 
 
 class CheckpointStore:
@@ -24,7 +24,7 @@ class CheckpointStore:
         self.base = self.root / ".mydevagent" / "checkpoints"
         self.current: Checkpoint | None = None
 
-    # ---------------------------------------------------------------- turni
+    # ---------------------------------------------------------------- turns
     def begin(self, label: str) -> Checkpoint:
         ids = [c.id for c in self.list()]
         self.current = Checkpoint(id=(max(ids) + 1 if ids else 1), label=label[:80], created=time.time(), files={})
@@ -34,15 +34,15 @@ class CheckpointStore:
         return self.base / f"{cp_id:04d}"
 
     def _copy(self, cp_id: int, rel: str) -> Path:
-        """Dove sta la copia di un file: anche ../altra-cartella/… e C:/… restano dentro il checkpoint."""
+        """Where a file's copy lives: even ../other-folder/… and C:/… stay inside the checkpoint."""
         parts = ["__up__" if p == ".." else p.replace(":", "_") for p in rel.replace("\\", "/").split("/")
                  if p not in ("", ".")]
         return self._dir(cp_id) / "files" / Path(*parts)
 
     def before_write(self, rel_path: str) -> None:
-        """Salva lo stato originale del file (una volta per turno) prima di modificarlo."""
+        """Saves the file's original state (once per turn) before editing it."""
         if self.current is None:
-            self.begin("modifica")
+            self.begin("edit")
         cp = self.current
         if rel_path in cp.files:
             return
@@ -58,7 +58,7 @@ class CheckpointStore:
         (folder / "manifest.json").write_text(json.dumps(
             {"id": cp.id, "label": cp.label, "created": cp.created, "files": cp.files}, indent=1), encoding="utf-8")
 
-    # --------------------------------------------------------------- lettura
+    # --------------------------------------------------------------- reading
     def list(self) -> list[Checkpoint]:
         if not self.base.is_dir():
             return []
@@ -71,7 +71,7 @@ class CheckpointStore:
                 continue
         return sorted(out, key=lambda c: c.id)
 
-    # -------------------------------------------------------------- ripristino
+    # -------------------------------------------------------------- restore
     def restore(self, cp: Checkpoint) -> list[str]:
         restored = []
         for rel, existed in cp.files.items():
@@ -95,7 +95,7 @@ class CheckpointStore:
         return cp, self.restore(cp)
 
     def rewind(self, cp_id: int) -> list[str]:
-        """Annulla tutti i checkpoint dal più recente fino a `cp_id` compreso."""
+        """Undoes every checkpoint from the most recent back to `cp_id` inclusive."""
         restored: list[str] = []
         for cp in reversed(self.list()):
             if cp.id < cp_id:
@@ -104,7 +104,7 @@ class CheckpointStore:
         return sorted(set(restored))
 
     def session_diff(self, since_id: int = 0) -> str:
-        """Diff cumulativo delle modifiche dei checkpoint con id >= since_id rispetto a oggi."""
+        """Cumulative diff of the changes in checkpoints with id >= since_id against the current files."""
         originals: dict[str, str | None] = {}
         for cp in self.list():
             if cp.id < since_id:

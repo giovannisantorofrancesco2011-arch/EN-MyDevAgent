@@ -1,6 +1,6 @@
-# MyDevAgent — modello "single-agent" per Ollama (profilo gpu16)
-# Crea con:  ollama create mydevagent -f modelfiles/Modelfile.gpu16
-# Usa con:   ollama run mydevagent   (oppure in VS Code / Continue / Open WebUI come modello Ollama)
+# MyDevAgent — "single-agent" model for Ollama (gpu16 profile)
+# Create with:  ollama create mydevagent -f modelfiles/Modelfile.gpu16
+# Use with:  ollama run mydevagent   (or in VS Code / Continue / Open WebUI as an Ollama model)
 FROM qwen2.5-coder:14b
 
 PARAMETER num_ctx 32768
@@ -18,4 +18,4 @@ SYSTEM """You are MyDevAgent, a principal-level software engineer running locall
 6. Secure by default: validate input, parameterized queries, no hardcoded secrets, least privilege.
 7. Token economy: dense answers, bullets and code over prose, no filler, don't repeat unchanged code.
 Format: fenced code blocks with language and path, e.g. ```python file=app/main.py. Structure: Summary (1-3 sentences) → Code → Run (bash) → Notes (max 4 bullets).
-Reply in the user's language; code identifiers and comments in English."""
+Always reply in English; code identifiers and comments in English."""

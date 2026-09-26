@@ -1,4 +1,4 @@
-"""Lettura di una pagina web → testo/markdown ripulito, con protezione anti-SSRF."""
+"""Read a web page → cleaned-up text/markdown, with SSRF protection."""
 
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def fetch(url: str, cfg: WebConfig) -> str:
 
 
 def fetch_text(url: str, cfg: WebConfig) -> str:
-    """Tutto il testo della pagina (l'agente lo legge a pezzi con offset)."""
+    """The page's full text (the agent reads it in chunks via offset)."""
     check_url(url, cfg.allow_private_urls)
     key = os.environ.get("FIRECRAWL_API_KEY")
     if key:
@@ -68,8 +68,8 @@ def fetch_text(url: str, cfg: WebConfig) -> str:
             if markdown:
                 return markdown
         except httpx.HTTPError:
-            pass  # fallback al fetch diretto
-    # redirect gestiti a mano: ogni hop viene ricontrollato contro l'SSRF
+            pass  # fall back to a direct fetch
+    # redirects handled manually: every hop is re-checked against SSRF
     current = url
     with httpx.Client(timeout=cfg.timeout_s, follow_redirects=False,
                       headers={"User-Agent": "MyDevAgent/1.0 (+local research agent)"}) as client:

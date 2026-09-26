@@ -1,4 +1,4 @@
-# MyDevAgent server (OpenAI-compatibile) — immagine leggera, il modello gira in Ollama/vLLM
+# MyDevAgent server (OpenAI-compatible) — lightweight image, the model runs in Ollama/vLLM
 FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MYDEVAGENT_HOME=/app
 WORKDIR /app

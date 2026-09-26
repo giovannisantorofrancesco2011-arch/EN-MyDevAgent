@@ -1,4 +1,4 @@
-"""Contesto del progetto per l'agente: memoria (MYDEVAGENT.md) + repo map compatta (idea di Aider)."""
+"""Project context for the agent: memory (MYDEVAGENT.md) + compact repo map (an idea from Aider)."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ EXT_LANG = {".js": "js", ".jsx": "js", ".ts": "js", ".tsx": "js", ".mjs": "js", 
 
 
 def read_memory(root: Path) -> str:
-    """MYDEVAGENT.md / AGENTS.md / CLAUDE.md del progetto + memoria utente globale."""
+    """The project's MYDEVAGENT.md / AGENTS.md / CLAUDE.md + global user memory."""
     parts = []
     user = Path(os.environ.get("MYDEVAGENT_STATE_DIR", Path.home() / ".mydevagent")) / "MYDEVAGENT.md"
     for path in [user] + [root / name for name in MEMORY_FILES]:
@@ -52,7 +52,7 @@ def read_memory(root: Path) -> str:
 
 
 def collect_attachments(root: Path, text: str, extra_dirs: list[Path] | tuple[Path, ...] = ()) -> dict[str, str]:
-    """I file citati con @percorso nel messaggio (solo dentro il progetto o le cartelle in più, niente segreti)."""
+    """Files mentioned as @path in the message (only inside the project or the extra folders, no secrets)."""
     files: dict[str, str] = {}
     for token in text.split():
         if not token.startswith("@") or len(token) < 2:
@@ -70,7 +70,7 @@ def collect_attachments(root: Path, text: str, extra_dirs: list[Path] | tuple[Pa
 
 def append_memory(root: Path, note: str) -> Path:
     path = root / "MYDEVAGENT.md"
-    existing = path.read_text(encoding="utf-8") if path.is_file() else "# MYDEVAGENT.md\n\n## Note\n"
+    existing = path.read_text(encoding="utf-8") if path.is_file() else "# MYDEVAGENT.md\n\n## Notes\n"
     if not existing.endswith("\n"):
         existing += "\n"
     path.write_text(existing + f"- {note.strip()}\n", encoding="utf-8")
@@ -189,7 +189,7 @@ class RepoMap:
 
 
 def extra_dirs_context(root: Path, dirs: list[Path], limit: int = 60) -> str:
-    """Le cartelle in più (/add-dir): dove sono, i loro primi file e la loro memoria."""
+    """The extra folders (/add-dir): where they are, their first files and their memory."""
     blocks = []
     for folder in dirs:
         files: list[str] = []

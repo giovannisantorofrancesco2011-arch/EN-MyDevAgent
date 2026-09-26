@@ -20,7 +20,7 @@ def test_models(client):
 
 def test_chat_non_stream(client):
     resp = client.post("/v1/chat/completions", json={
-        "model": "mydevagent-fast", "messages": [{"role": "user", "content": "somma in python"}]})
+        "model": "mydevagent-fast", "messages": [{"role": "user", "content": "sum in python"}]})
     body = resp.json()
     assert resp.status_code == 200
     assert "def add" in body["choices"][0]["message"]["content"]
@@ -30,7 +30,7 @@ def test_chat_stream_with_progress(client):
     with client.stream("POST", "/v1/chat/completions", json={
         "model": "mydevagent-balanced", "stream": True,
         "messages": [{"role": "system", "content": "ignored"},
-                     {"role": "user", "content": "API FastAPI con Postgres"}]}) as resp:
+                     {"role": "user", "content": "FastAPI API with Postgres"}]}) as resp:
         lines = [line for line in resp.iter_lines() if line.startswith("data: ")]
     assert lines[-1] == "data: [DONE]"
     text = "".join(json.loads(line[6:])["choices"][0]["delta"].get("content", "") for line in lines[:-1])

@@ -1,4 +1,4 @@
-"""Accesso al filesystem confinato in una workspace root (niente path traversal/symlink escape)."""
+"""Filesystem access confined to a workspace root (no path traversal/symlink escape)."""
 
 from __future__ import annotations
 
@@ -20,10 +20,10 @@ class WorkspaceError(PermissionError):
 
 
 def display_path(root: Path, target: Path) -> str:
-    """Un percorso come lo scrive l'agente: relativo al progetto (anche ../altra-cartella/…), o assoluto."""
+    """A path as the agent writes it: relative to the project (even ../other-folder/…), or absolute."""
     try:
         return os.path.relpath(target, root).replace(os.sep, "/")
-    except ValueError:  # Windows: un altro disco
+    except ValueError:  # Windows: a different drive
         return Path(target).as_posix()
 
 
@@ -31,7 +31,7 @@ class Workspace:
     def __init__(self, root: str | Path, allow_write: bool = False, extra: list[Path] | tuple = ()) -> None:
         self.root = Path(root).expanduser().resolve()
         self.allow_write = allow_write
-        self.extra = [Path(p).expanduser().resolve() for p in extra]  # cartelle in più (/add-dir)
+        self.extra = [Path(p).expanduser().resolve() for p in extra]  # extra folders (/add-dir)
 
     def resolve(self, path: str | Path) -> Path:
         candidate = (self.root / path).resolve()

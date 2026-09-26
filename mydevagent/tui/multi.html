@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MyDevAgent · multigiocatore</title>
+<title>MyDevAgent · multiplayer</title>
 <style>
   :root { --bg: #15111b; --panel: #1f1928; --line: #3a2d4d; --text: #e8e3ef; --dim: #8e869b; --accent: #a855f7; --soft: #e9d5ff; }
   * { box-sizing: border-box; }
@@ -61,54 +61,54 @@
   </svg>
   <div>
     <div id="who">MyDevAgent</div>
-    <div id="vio">Vio ti aspetta…</div>
+    <div id="vio">Vio is waiting for you…</div>
   </div>
-  <div id="status">non collegato</div>
+  <div id="status">not connected</div>
 </header>
 <main id="scroll">
   <div id="feed"></div>
-  <div id="busy" hidden>Vio sta lavorando</div>
+  <div id="busy" hidden>Vio is working</div>
 </main>
 <footer>
   <form id="composer">
-    <textarea id="text" rows="1" placeholder="Scrivi all'agente…" disabled></textarea>
-    <button id="send" disabled>Invia</button>
+    <textarea id="text" rows="1" placeholder="Write to the agent…" disabled></textarea>
+    <button id="send" disabled>Send</button>
   </form>
-  <div class="hint" id="hint">Invio per mandare · Maiusc+Invio per andare a capo</div>
+  <div class="hint" id="hint">Enter to send · Shift+Enter for a new line</div>
 </footer>
 
 <dialog id="join">
   <form id="join-form">
-    <h1>Entra nella sessione</h1>
-    <p>Vedrai cosa fa l'agente e potrai scrivergli. Le modifiche ai file le conferma chi ti ha invitato.</p>
-    <label for="name">Il tuo nome</label>
+    <h1>Join the session</h1>
+    <p>You'll see what the agent does and you can write to it. File changes are confirmed by whoever invited you.</p>
+    <label for="name">Your name</label>
     <input id="name" maxlength="20" autocomplete="nickname" required>
-    <label for="code">Codice</label>
+    <label for="code">Code</label>
     <input id="code" maxlength="6" autocomplete="off" autocapitalize="characters" required>
     <div id="join-error"></div>
-    <button>Entra</button>
+    <button>Join</button>
   </form>
 </dialog>
 
 <script>
   const $ = (id) => document.getElementById(id);
   const scroller = $("scroll");
-  let code = (new URLSearchParams(location.search).get("codice") || "").toUpperCase();
+  let code = (new URLSearchParams(location.search).get("code") || "").toUpperCase();
   let name = "";
   let host = "";
-  try { name = localStorage.getItem("mydevagent-nome") || ""; } catch (e) {}
+  try { name = localStorage.getItem("mydevagent-name") || ""; } catch (e) {}
 
   async function post(path, extra) {
     let response;
     try {
       response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ codice: code, nome: name, ...extra }) });
+                                      body: JSON.stringify({ code: code, name: name, ...extra }) });
     } catch (e) {
-      throw new Error("Non raggiungo la sessione: siete sulla stessa rete Wi-Fi? È ancora aperta?");
+      throw new Error("Can't reach the session: are you on the same Wi-Fi network? Is it still open?");
     }
-    if (response.status === 403) throw new Error("Codice sbagliato: controlla quello che ti hanno dato.");
-    if (response.status === 429) throw new Error("Troppi tentativi sbagliati: chiedi di nuovo il link.");
-    if (!response.ok) throw new Error("Qualcosa non va (errore " + response.status + ").");
+    if (response.status === 403) throw new Error("Wrong code: check the one you were given.");
+    if (response.status === 429) throw new Error("Too many wrong attempts: ask for the link again.");
+    if (!response.ok) throw new Error("Something went wrong (error " + response.status + ").");
     return response.json();
   }
 
@@ -122,7 +122,7 @@
     if (item.kind === "vio") { $("vio").textContent = "Vio: " + item.text; return; }
     if (item.kind === "busy") { $("busy").hidden = !item.on; if (item.on) scroller.scrollTop = scroller.scrollHeight; return; }
     let el;
-    if (item.kind === "html") {  // il terminale di chi ospita, già convertito (e con l'escape) da MyDevAgent
+    if (item.kind === "html") {  // the host's terminal, already converted (and escaped) by MyDevAgent
       el = document.createElement("pre");
       el.className = "term";
       el.innerHTML = item.html;
@@ -130,7 +130,7 @@
       el = document.createElement("div");
       el.className = "msg" + (item.who === name ? " me" : "");
       const who = document.createElement("b");
-      who.textContent = item.who === name ? item.who + " (tu)" : item.who;
+      who.textContent = item.who === name ? item.who + " (you)" : item.who;
       el.append(who, item.text);
     } else if (item.kind === "system") {
       el = document.createElement("div");
@@ -141,23 +141,23 @@
   }
 
   function connect() {
-    $("who").textContent = "Sessione di " + host;
-    document.title = "Sessione di " + host + " · MyDevAgent";
-    $("hint").textContent = "Invio per mandare · Maiusc+Invio per andare a capo · modifiche e comandi li conferma " + host;
+    $("who").textContent = host + "'s session";
+    document.title = host + "'s session · MyDevAgent";
+    $("hint").textContent = "Enter to send · Shift+Enter for a new line · changes and commands are confirmed by " + host;
     $("text").disabled = $("send").disabled = false;
     $("text").focus();
-    const events = new EventSource("/events?codice=" + encodeURIComponent(code));
+    const events = new EventSource("/events?code=" + encodeURIComponent(code));
     events.onmessage = (e) => show(JSON.parse(e.data));
-    events.onopen = () => { $("status").textContent = "collegato"; $("status").className = "on"; };
-    events.onerror = () => { $("status").textContent = "riprovo a collegarmi…"; $("status").className = ""; };
+    events.onopen = () => { $("status").textContent = "connected"; $("status").className = "on"; };
+    events.onerror = () => { $("status").textContent = "reconnecting…"; $("status").className = ""; };
   }
 
   async function join() {
     const result = await post("/join", {});
-    name = result.nome;
+    name = result.name;
     host = result.host;
-    try { localStorage.setItem("mydevagent-nome", name); } catch (e) {}
-    history.replaceState(null, "", "?codice=" + encodeURIComponent(code));
+    try { localStorage.setItem("mydevagent-name", name); } catch (e) {}
+    history.replaceState(null, "", "?code=" + encodeURIComponent(code));
     connect();
   }
 
@@ -173,7 +173,7 @@
     const text = $("text").value.trim();
     if (!text) return;
     $("send").disabled = true;
-    try { await post("/send", { testo: text }); $("text").value = ""; grow(); }
+    try { await post("/send", { text: text }); $("text").value = ""; grow(); }
     catch (err) { show({ kind: "system", text: err.message }); }
     finally { $("send").disabled = false; $("text").focus(); }
   }

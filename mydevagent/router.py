@@ -1,7 +1,8 @@
-"""Router: decide modalità (fast/balanced/deep) e quali dei 15 agenti attivare.
+"""Router: picks the mode (fast/balanced/deep) and which of the 15 agents to activate.
 
-Euristiche deterministiche (0 token, <1 ms) con fallback opzionale a un modello piccolo.
-Override dell'utente: `/fast`, `/balanced`, `/deep`, `@security`, `@perf`, `@web`, ...
+Deterministic heuristics (0 tokens, <1 ms) with an optional fallback to a small model.
+User overrides: `/fast`, `/balanced`, `/deep`, `@security`, `@perf`, `@web`, ...
+English is the primary language; a few Italian hints are kept alongside for mixed input.
 """
 
 from __future__ import annotations
@@ -14,16 +15,19 @@ from .config import Settings
 from .registry import AgentRegistry
 
 MODE_CMD_RE = re.compile(r"(?<![\w/])/(ultra-deep|fast|balanced|deep)(?![\w-])", re.IGNORECASE)
-ULTRA_HINTS = ("audit completo", "full audit", "enterprise", "mission critical", "mission-critical",
-               "produzione completa", "production-grade", "da zero a produzione")
+ULTRA_HINTS = ("full audit", "complete audit", "enterprise", "mission critical", "mission-critical",
+               "production-grade", "production grade", "zero to production",
+               "audit completo", "produzione completa", "da zero a produzione")
 MENTION_RE = re.compile(r"(?<![\w@])@([a-zA-Z_][\w-]*)")
 FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 URL_RE = re.compile(r"https?://\S+")
 TRACE_LINE_RE = re.compile(r"^\s*(File \".*\", line \d+|at .+\(.+:\d+:\d+\)|Traceback|\S+Error:|\S+Exception)", re.M)
 DEEP_HINTS = (
-    "production-ready", "production ready", "pronto per la produzione", "in produzione", "enterprise",
-    "end-to-end", "end to end", "full-stack", "full stack", "app completa", "applicazione completa",
-    "sistema completo", "complete app", "from scratch", "da zero", "saas", "mvp completo",
+    "production-ready", "production ready", "in production", "enterprise",
+    "end-to-end", "end to end", "full-stack", "full stack", "complete app", "complete application",
+    "full application", "complete system", "from scratch", "saas", "complete mvp", "full mvp",
+    "pronto per la produzione", "in produzione", "app completa", "applicazione completa",
+    "sistema completo", "da zero", "mvp completo",
 )
 MAX_SPECIALISTS = 4
 
@@ -40,22 +44,22 @@ class Route:
     reasons: list[str] = field(default_factory=list)
     scores: dict[str, int] = field(default_factory=dict)
     suggest_ultra: bool = False
-    ultra_relevant: list[str] = field(default_factory=list)  # agenti estesi pertinenti (ultra-deep)
+    ultra_relevant: list[str] = field(default_factory=list)  # relevant extended agents (ultra-deep)
 
     @property
     def agents(self) -> list[str]:
-        """Agenti coinvolti, nell'ordine in cui lavorano."""
+        """Agents involved, in the order they work."""
         if self.mode == "fast":
             return [self.primary, "formatter"]
         if self.mode == "ultra-deep":
-            return ["35 agenti"]
+            return ["35 agents"]
         order = (["research"] if self.research else []) + ["architect"] + self.specialists + ["debug_test"]
         order += self.gate + (["docs"] if self.docs else []) + ["formatter"]
         return list(dict.fromkeys(order))
 
 
 def prose_length(text: str) -> int:
-    """Lunghezza della parte "discorsiva": codice incollato e traceback non contano."""
+    """Length of the prose part: pasted code and tracebacks do not count."""
     text = FENCE_RE.sub(" ", text)
     text = TRACE_LINE_RE.sub(" ", text)
     return len(" ".join(text.split()))
@@ -110,7 +114,7 @@ class Router:
 
             return MENTION_RE.sub(repl, segment)
 
-        # le menzioni valgono solo fuori dai blocchi di codice (es. @Test in Java resta intatto)
+        # mentions only count outside code blocks (e.g. @Test in Java stays intact)
         parts = re.split(r"(```.*?```)", text, flags=re.DOTALL)
         clean = "".join(p if p.startswith("```") else _strip_mentions(p) for p in parts).strip()
         if mentions:
@@ -123,7 +127,7 @@ class Router:
 
         stage = {a.key: a.stage for a in self.registry}
         research = "research" in scores or bool(URL_RE.search(clean))
-        if has_images and "frontend" not in scores and re.search(r"\b(ui|mockup|design|layout|pagina|page)\b",
+        if has_images and "frontend" not in scores and re.search(r"\b(ui|mockup|design|layout|page|screen|pagina)\b",
                                                                  clean, re.I):
             scores["frontend"] = 1
 

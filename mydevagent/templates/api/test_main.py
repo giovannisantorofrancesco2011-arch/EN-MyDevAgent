@@ -10,7 +10,7 @@ def test_home():
 
 
 def test_add_and_complete_todo():
-    todo = client.post("/todos", json={"text": "studiare"}).json()
+    todo = client.post("/todos", json={"text": "study"}).json()
     assert todo["done"] is False
     assert client.post(f"/todos/{todo['id']}/done").json()["done"] is True
     assert client.post("/todos/999/done").status_code == 404

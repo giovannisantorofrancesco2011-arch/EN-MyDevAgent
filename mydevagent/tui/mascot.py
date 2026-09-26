@@ -1,8 +1,8 @@
-"""Vio, il polpetto viola di MyDevAgent (tanti tentacoli, come i suoi agenti).
+"""Vio, MyDevAgent's little purple octopus (lots of tentacles, like its agents).
 
-Pixel art 14×8 disegnata con i mezzi blocchi (▀ ▄): ogni carattere contiene due pixel, quindi Vio occupa
-14 colonne e 4 righe. Sta sopra la barra dove scrivi: cambia espressione con la modalità (Shift+Tab),
-muove i tentacoli, sbatte le palpebre, sorride a fine lavoro, fa gli occhi a X sugli errori e i cuori con /vio.
+14×8 pixel art drawn with half blocks (▀ ▄): each character holds two pixels, so Vio takes up
+14 columns and 4 rows. It sits above the input bar: changes expression with the mode (Shift+Tab),
+wiggles its tentacles, blinks, smiles when work is done, gets X eyes on errors and hearts with /vio.
 """
 
 from __future__ import annotations
@@ -12,15 +12,15 @@ from rich.text import Text
 NAME = "Vio"
 PURPLE = "#a855f7"
 COLORS = {
-    "P": PURPLE,  # corpo
-    "D": "#581c87",  # contorno e tentacoli
-    "L": "#d8b4fe",  # riflesso
-    "K": "#1a0b2e",  # occhi e bocca
-    "W": "#ffffff",  # luce negli occhi
-    "C": "#f472b6",  # guance e cuori
-    "Y": "#facc15",  # occhi a stella
-    "B": "#67e8f9",  # occhiali
-    "R": "#f43f5e",  # errore
+    "P": PURPLE,  # body
+    "D": "#581c87",  # outline and tentacles
+    "L": "#d8b4fe",  # highlight
+    "K": "#1a0b2e",  # eyes and mouth
+    "W": "#ffffff",  # eye sparkle
+    "C": "#f472b6",  # cheeks and hearts
+    "Y": "#facc15",  # star eyes
+    "B": "#67e8f9",  # glasses
+    "R": "#f43f5e",  # error
 }
 
 HEAD = [".....DDDD.....", "...DDPPPPDD...", "..DPLPPPPPPD.."]
@@ -39,17 +39,17 @@ MOUTHS = {
     "open": ".DPCPKKKKPCPD.",
     "flat": ".DPCPPDDPPCPD.",
 }
-TENTACLES = [  # due pose: si alternano per farli ondeggiare
+TENTACLES = [  # two poses: they alternate to make them wave
     ["DPDPDPPPPDPDPD", "D.P.P.DD.P.P.D"],
     ["DPDPDPPPPDPDPD", ".D.P.PDDP.P.D."],
 ]
-# nome → (occhi, bocca)
+# name → (eyes, mouth)
 EXPRESSIONS = {
-    "ask": ("open", "smile"),  # curiosa: chiede prima di toccare i file
-    "auto-edit": ("happy", "open"),  # entusiasta: modifica da sola
-    "plan": ("glasses", "flat"),  # studiosa: legge e pianifica
-    "auto": ("stars", "open"),  # a tutto gas
-    "chat": ("look", "smile"),  # chiacchiera
+    "ask": ("open", "smile"),  # curious: asks before touching files
+    "auto-edit": ("happy", "open"),  # eager: edits on its own
+    "plan": ("glasses", "flat"),  # studious: reads and plans
+    "auto": ("stars", "open"),  # full throttle
+    "chat": ("look", "smile"),  # chatting
     "fast": ("happy", "smile"),
     "balanced": ("open", "smile"),
     "deep": ("glasses", "smile"),
@@ -62,18 +62,18 @@ EXPRESSIONS = {
     "love": ("hearts", "smile"),
 }
 SAYS = {
-    "ask": "Ti chiedo conferma prima di ogni modifica.",
-    "auto-edit": "Modifico i file da sola, per i comandi ti chiedo.",
-    "plan": "Leggo e ti propongo un piano, senza toccare niente.",
-    "auto": "Faccio tutto da sola, dentro questa cartella.",
-    "chat": "Rispondo e basta: i file li salvi tu con /apply.",
-    "fast": "Vado veloce: un solo agente.",
-    "balanced": "Team standard: piano, modifiche, test e review.",
-    "deep": "Team completo: sicurezza, performance, casi limite.",
-    "ultra-deep": "35 agenti al lavoro: lento, ma per i lavori importanti.",
-    "auto-team": "Scelgo io il team giusto per ogni richiesta.",
+    "ask": "I'll ask you before every change.",
+    "auto-edit": "I edit files on my own, and ask you before commands.",
+    "plan": "I read and propose a plan, without touching anything.",
+    "auto": "I do everything on my own, inside this folder.",
+    "chat": "I just answer: you save the files with /apply.",
+    "fast": "Going fast: a single agent.",
+    "balanced": "Standard team: plan, edits, tests and review.",
+    "deep": "Full team: security, performance, edge cases.",
+    "ultra-deep": "35 agents at work: slow, but for the big jobs.",
+    "auto-team": "I pick the right team for each request.",
 }
-PATS = ["Grazie! ♥", "Fusa da polpo in corso… ♥", "Otto tentacoli pronti a programmare! ♥", "Ancora, ancora! ♥"]
+PATS = ["Thank you! ♥", "Octopus purring in progress… ♥", "Eight tentacles ready to code! ♥", "More, more! ♥"]
 THINK_FACES = ["(•_•)", "( •_•)", "(•_• )", "(-_-)", "(•_•)", "(•_•)ゞ"]
 WIDTH = 14
 
@@ -84,7 +84,7 @@ def sprite(expression: str = "ask", frame: int = 0) -> list[str]:
 
 
 def cells(expression: str = "ask", frame: int = 0) -> list[list[tuple[str, str | None, str | None]]]:
-    """Righe di (carattere, colore primo piano, colore sfondo): due pixel per carattere."""
+    """Rows of (character, foreground color, background color): two pixels per character."""
     rows = sprite(expression, frame)
     out = []
     for top, bottom in zip(rows[0::2], rows[1::2], strict=True):
@@ -102,7 +102,7 @@ def cells(expression: str = "ask", frame: int = 0) -> list[list[tuple[str, str |
 
 
 def render(expression: str = "ask", frame: int = 0) -> Text:
-    """Per rich (anteprima e test)."""
+    """For rich (preview and tests)."""
     out = Text()
     for line in cells(expression, frame):
         for char, fg, bg in line:
@@ -113,7 +113,7 @@ def render(expression: str = "ask", frame: int = 0) -> Text:
 
 
 def fragments(expression: str = "ask", frame: int = 0) -> list[list[tuple[str, str]]]:
-    """Per prompt_toolkit: una lista di frammenti (stile, testo) per ogni riga."""
+    """For prompt_toolkit: a list of (style, text) fragments for each row."""
     return [[(f"fg:{fg}" + (f" bg:{bg}" if bg else ""), char) if fg else ("", char) for char, fg, bg in line]
             for line in cells(expression, frame)]
 
@@ -122,7 +122,7 @@ def think_face(elapsed: float) -> str:
     return THINK_FACES[int(elapsed * 2) % len(THINK_FACES)]
 
 
-if __name__ == "__main__":  # anteprima: python -m mydevagent.tui.mascot
+if __name__ == "__main__":  # preview: python -m mydevagent.tui.mascot
     from rich.console import Console
 
     console = Console()

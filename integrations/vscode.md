@@ -1,30 +1,30 @@
 # MyDevAgent in VS Code
 
-Tre strade, dalla più completa alla più semplice.
+Three ways, from the most complete to the simplest.
 
-## 1. Continue.dev (consigliata: chat multi-agente + autocomplete + @codebase)
-1. Installa l'estensione **Continue** dal Marketplace.
-2. Avvia il server: `mydevagent serve` (lascialo aperto in un terminale).
-3. Scarica il modello per l'autocomplete: `ollama pull qwen2.5-coder:1.5b-base`.
-4. Copia [`continue/config.yaml`](continue/config.yaml) in `~/.continue/config.yaml`
+## 1. Continue.dev (recommended: multi-agent chat + autocomplete + @codebase)
+1. Install the **Continue** extension from the Marketplace.
+2. Start the server: `mydevagent serve` (leave it running in a terminal).
+3. Download the autocomplete model: `ollama pull qwen2.5-coder:1.5b-base`.
+4. Copy [`continue/config.yaml`](continue/config.yaml) to `~/.continue/config.yaml`
    (Windows: `%USERPROFILE%\.continue\config.yaml`).
-5. Apri la sidebar di Continue (`Ctrl/Cmd+L`) → scegli **MyDevAgent (team 15 agenti)**.
-   - `Ctrl/Cmd+I` = edit inline (usa *MyDevAgent Fast*).
-   - Tab = autocomplete locale.
-   - Nel messaggio: `/deep`, `@security`, `@perf`, `@web` per guidare il team.
+5. Open the Continue sidebar (`Ctrl/Cmd+L`) → pick **MyDevAgent (15-agent team)**.
+   - `Ctrl/Cmd+I` = inline edit (uses *MyDevAgent Fast*).
+   - Tab = local autocomplete.
+   - In your message: `/deep`, `@security`, `@perf`, `@web` to steer the team.
 
-## 2. GitHub Copilot Chat con modelli locali (BYOK)
-Copilot Chat permette di aggiungere modelli locali tramite **Ollama**:
-1. `ollama create mydevagent -f modelfiles/Modelfile.gpu8` (lo fa già `scripts/install.sh`).
-2. In Copilot Chat: selettore modelli → **Manage Models…** → **Ollama** → seleziona `mydevagent`.
+## 2. GitHub Copilot Chat with local models (BYOK)
+Copilot Chat lets you add local models through **Ollama**:
+1. `ollama create mydevagent -f modelfiles/Modelfile.gpu8` (`scripts/install.sh` already does this).
+2. In Copilot Chat: model picker → **Manage Models…** → **Ollama** → select `mydevagent`.
 
-Così usi la persona MyDevAgent a singolo agente (veloce). Per il team completo a 15 agenti usa Continue
-(o un provider "OpenAI Compatible" puntato a `http://127.0.0.1:8000/v1`, se la tua versione di VS Code
-lo offre in *Manage Models*). Nota: alcune funzioni di Copilot (es. completamenti inline) possono ancora
-richiedere un account Copilot.
+This way you use the single-agent MyDevAgent persona (fast). For the full 15-agent team use Continue
+(or an "OpenAI Compatible" provider pointed at `http://127.0.0.1:8000/v1`, if your version of VS Code
+offers it in *Manage Models*). Note: some Copilot features (e.g. inline completions) may still
+require a Copilot account.
 
-## 3. Cline / Roo Code (agenti che modificano file ed eseguono comandi)
-Provider **OpenAI Compatible** → Base URL `http://127.0.0.1:8000/v1`, API key qualsiasi (o
-`MYDEVAGENT_API_KEY`), Model ID `mydevagent-fast` (Cline invia prompt molto lunghi con le sue istruzioni:
-la modalità fast evita di moltiplicarli per 15 agenti). In alternativa scegli direttamente il provider
-**Ollama** con il modello `mydevagent`.
+## 3. Cline / Roo Code (agents that edit files and run commands)
+**OpenAI Compatible** provider → Base URL `http://127.0.0.1:8000/v1`, any API key (or
+`MYDEVAGENT_API_KEY`), Model ID `mydevagent-fast` (Cline sends very long prompts with its own instructions:
+fast mode avoids multiplying them by 15 agents). Alternatively pick the
+**Ollama** provider directly with the `mydevagent` model.

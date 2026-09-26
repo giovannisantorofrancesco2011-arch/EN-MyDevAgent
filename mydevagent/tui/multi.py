@@ -1,10 +1,10 @@
-"""Multigiocatore: gli amici sulla tua rete (stesso Wi-Fi) aprono un link e seguono la sessione dal browser:
-vedono il lavoro dell'agente com'è nel tuo terminale e gli scrivono. I loro messaggi arrivano nella tua UI
-e l'agente li esegue come i tuoi, ma modifiche e comandi li confermi sempre tu. Serve il codice di /multi.
+"""Multiplayer: friends on your network (same Wi-Fi) open a link and follow the session from the browser:
+they see the agent's work as it appears in your terminal and write to it. Their messages arrive in your UI
+and the agent runs them like yours, but you always confirm changes and commands. Requires the /multi code.
 
-    GET  /                 la pagina per gli amici
-    GET  /events?codice=   il feed della sessione (Server-Sent Events, riprende da Last-Event-ID)
-    POST /join  /send      {codice, nome[, testo]}
+    GET  /                 the page for friends
+    GET  /events?code=     the session feed (Server-Sent Events, resumes from Last-Event-ID)
+    POST /join  /send      {code, name[, text]}
 """
 
 from __future__ import annotations
@@ -29,20 +29,20 @@ from rich.segment import Segment
 from rich.terminal_theme import MONOKAI, TerminalTheme
 
 PAGE = Path(__file__).with_name("multi.html")
-ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # niente 0/O e 1/I: si detta a voce
+ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O or 1/I: it gets read out loud
 DEFAULT_PORT = 8765
-WIDTH = 90  # colonne del «terminale» nella pagina
+WIDTH = 90  # columns of the "terminal" in the page
 MAX_TEXT = 4000
 MAX_FEED = 5000
-MAX_FAILURES = 20  # codici sbagliati per indirizzo, poi basta
+MAX_FAILURES = 20  # wrong codes per address, then that's it
 KEEPALIVE_S = 15
-# i colori di Monokai sullo sfondo della pagina
+# Monokai colors on the page background
 THEME = TerminalTheme((21, 17, 27), (217, 217, 217), [MONOKAI.ansi_colors[i] for i in range(8)],
                       [MONOKAI.ansi_colors[i] for i in range(8, 16)])
 
 
 def lan_ip() -> str:
-    """L'indirizzo di questo PC nella rete locale (non parte nessun pacchetto: serve solo a scegliere la scheda)."""
+    """This PC's address on the local network (no packet is sent: it only picks the network interface)."""
     with contextlib.suppress(OSError), socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.connect(("10.255.255.255", 1))
         return s.getsockname()[0]
@@ -51,7 +51,7 @@ def lan_ip() -> str:
 
 def clean_name(name: Any) -> str:
     name = re.sub(r"[^\w .'()-]", "", str(name or ""))[:20].strip()
-    return name or "Ospite"
+    return name or "Guest"
 
 
 class _Nowhere(io.StringIO):
@@ -60,7 +60,7 @@ class _Nowhere(io.StringIO):
 
 
 class Tee:
-    """Stampa sulla console dell'host e su quella della stanza."""
+    """Prints to the host's console and to the room's."""
 
     def __init__(self, *consoles: Console) -> None:
         self.consoles = consoles
@@ -71,9 +71,9 @@ class Tee:
 
 
 def to_html(console: Console) -> str:
-    """Quello che la console (record=True) ha registrato, in HTML, e svuota la registrazione.
+    """What the console (record=True) has recorded, as HTML, and clears the recording.
 
-    Niente link: export_html di Rich li scrive senza escape, e nelle risposte del modello può esserci di tutto.
+    No links: Rich's export_html writes them unescaped, and the model's answers may contain anything.
     """
     with console._record_buffer_lock:
         segments = list(Segment.filter_control(Segment.simplify(console._record_buffer)))
@@ -86,13 +86,13 @@ def to_html(console: Console) -> str:
 
 
 class Room:
-    """La stanza: il feed di quello che succede, chi si è collegato e i messaggi degli amici per l'host."""
+    """The room: the feed of what happens, who joined and the friends' messages for the host."""
 
     def __init__(self, host: str, port: int = DEFAULT_PORT, bind: str = "0.0.0.0") -> None:
         self.host = host
         self.code = "".join(secrets.choice(ALPHABET) for _ in range(6))
         self.console = Console(file=_Nowhere(), record=True, width=WIDTH, force_terminal=True,
-                               color_system="truecolor")  # quello che stampi qui finisce nella pagina
+                               color_system="truecolor")  # whatever you print here ends up in the page
         self.feed: list[dict[str, Any]] = []
         self.next_id = 0
         self.guests: list[str] = []
@@ -105,7 +105,7 @@ class Room:
         self.page = PAGE.read_bytes()
         try:
             self.server = ThreadingHTTPServer((bind, port), _Handler)
-        except OSError:  # porta occupata: una libera qualsiasi
+        except OSError:  # port taken: any free one
             self.server = ThreadingHTTPServer((bind, 0), _Handler)
         self.server.daemon_threads = True
         self.server.room = self
@@ -116,7 +116,7 @@ class Room:
         return self.server.server_address[1]
 
     def link(self) -> str:
-        return f"http://{lan_ip()}:{self.port}/?codice={self.code}"
+        return f"http://{lan_ip()}:{self.port}/?code={self.code}"
 
     # ------------------------------------------------------------------ feed
     def publish(self, item: dict[str, Any]) -> None:
@@ -127,7 +127,7 @@ class Room:
             self._cond.notify_all()
 
     def flush(self) -> None:
-        """Manda agli amici quello che è stato stampato su self.console."""
+        """Sends friends whatever was printed on self.console."""
         chunk = to_html(self.console)
         if chunk:
             self.publish({"kind": "html", "html": chunk})
@@ -141,7 +141,7 @@ class Room:
                 self._cond.wait(timeout)
             return [i for i in self.feed if i["id"] > since]
 
-    # --------------------------------------------------------------- amici
+    # ------------------------------------------------------------- friends
     def allowed(self, address: str, code: Any) -> bool:
         if self.failures.get(address, 0) >= MAX_FAILURES:
             return False
@@ -153,10 +153,10 @@ class Room:
     def join(self, name: Any) -> str:
         name = clean_name(name)
         if name.lower() == self.host.lower():
-            name += " (ospite)"
+            name += " (guest)"
         if name not in self.guests:
             self.guests.append(name)
-            self.system(f"{name} si è collegato")
+            self.system(f"{name} joined")
             self.on_join(name)
         return name
 
@@ -197,14 +197,14 @@ class _Handler(BaseHTTPRequestHandler):
 
     def _refuse(self) -> None:
         tired = self.room.failures.get(self.client_address[0], 0) >= MAX_FAILURES
-        self._reply(429 if tired else 403, b'{"error": "codice sbagliato"}')
+        self._reply(429 if tired else 403, b'{"error": "wrong code"}')
 
     def do_GET(self) -> None:
         url = urlparse(self.path)
         if url.path == "/":
             self._reply(200, self.room.page, "text/html")
         elif url.path == "/events":
-            if not self.room.allowed(self.client_address[0], parse_qs(url.query).get("codice", [""])[0]):
+            if not self.room.allowed(self.client_address[0], parse_qs(url.query).get("code", [""])[0]):
                 self._refuse()
                 return
             try:
@@ -213,7 +213,7 @@ class _Handler(BaseHTTPRequestHandler):
                 since = -1
             self._events(since)
         else:
-            self._reply(404, b'{"error": "non trovato"}')
+            self._reply(404, b'{"error": "not found"}')
 
     def _events(self, since: int) -> None:
         self.send_response(200)
@@ -227,29 +227,29 @@ class _Handler(BaseHTTPRequestHandler):
                     self.wfile.write(f"id: {item['id']}\ndata: {json.dumps(item)}\n\n".encode())
                     since = item["id"]
                 if not items:
-                    self.wfile.write(b": ping\n\n")  # tiene viva la connessione
+                    self.wfile.write(b": ping\n\n")  # keeps the connection alive
                 self.wfile.flush()
                 if self.room.closed:
                     break
         except OSError:
-            pass  # l'amico ha chiuso la pagina
+            pass  # the friend closed the page
 
     def do_POST(self) -> None:
         try:
             size = min(int(self.headers.get("Content-Length") or 0), MAX_TEXT * 4)
             data = json.loads(self.rfile.read(size) or b"{}")
         except (ValueError, OSError):
-            self._reply(400, b'{"error": "richiesta non valida"}')
+            self._reply(400, b'{"error": "invalid request"}')
             return
-        if not isinstance(data, dict) or not self.room.allowed(self.client_address[0], data.get("codice")):
+        if not isinstance(data, dict) or not self.room.allowed(self.client_address[0], data.get("code")):
             self._refuse()
             return
         path = urlparse(self.path).path
         if path not in ("/join", "/send"):
-            self._reply(404, b'{"error": "non trovato"}')
+            self._reply(404, b'{"error": "not found"}')
             return
-        name = self.room.join(data.get("nome"))
-        text = str(data.get("testo") or "").strip()[:MAX_TEXT]
+        name = self.room.join(data.get("name"))
+        text = str(data.get("text") or "").strip()[:MAX_TEXT]
         if path == "/send" and text:
             self.room.message(name, text)
-        self._reply(200, json.dumps({"host": self.room.host, "nome": name}).encode())
+        self._reply(200, json.dumps({"host": self.room.host, "name": name}).encode())

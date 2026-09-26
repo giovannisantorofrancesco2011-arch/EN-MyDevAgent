@@ -1,4 +1,4 @@
-"""Permessi dell'agente, come in Claude Code: ask · auto-edit · plan · auto."""
+"""Agent permissions, as in Claude Code: ask · auto-edit · plan · auto."""
 
 from __future__ import annotations
 
@@ -12,24 +12,24 @@ from typing import Any
 
 MODES = ("ask", "auto-edit", "plan", "auto")
 MODE_LABELS = {
-    "ask": "chiede conferma",
-    "auto-edit": "modifiche automatiche",
-    "plan": "piano (sola lettura)",
-    "auto": "tutto automatico",
+    "ask": "asks for confirmation",
+    "auto-edit": "automatic edits",
+    "plan": "plan (read-only)",
+    "auto": "fully automatic",
 }
-# "task" avvia un sotto-agente: i suoi tool chiedono i permessi uno per uno
+# "task" starts a subagent: its tools ask for permission one by one
 READ_TOOLS = {"read_file", "list_files", "grep", "web_search", "todo_write", "git_diff", "skill", "task", "preview"}
 EDIT_TOOLS = {"edit_file", "write_file"}
 EXEC_TOOLS = {"bash", "run_tests"}
 
-# comandi che chiedono SEMPRE conferma, anche in modalità auto
+# commands that ALWAYS ask for confirmation, even in auto mode
 DANGEROUS = [
     r"\brm\s+(-\w*r\w*f|-\w*f\w*r)\b", r"\brm\s+-r\b", r"\bsudo\b", r"\bmkfs\b", r"\bdd\s+if=",
     r"git\s+push\b.*(--force|-f\b)", r"git\s+reset\s+--hard", r"git\s+clean\s+-\w*f",
     r"(curl|wget)[^|]*\|\s*(sh|bash|zsh|python)", r">\s*/dev/sd", r"\bchmod\s+-R\s+777", r":\(\)\s*\{",
     r"\bshutdown\b", r"\breboot\b", r"Remove-Item\b.*-Recurse", r"\bformat\s+[a-z]:",
 ]
-# comandi di sola lettura consentiti anche in modalità plan
+# read-only commands allowed even in plan mode
 READ_ONLY_COMMANDS = [r"^(ls|dir|cat|type|head|tail|wc|pwd|echo|tree|find|rg|grep|which|where)\b",
                       r"^git\s+(status|diff|log|show|branch|blame)\b"]
 
@@ -47,11 +47,11 @@ class ApprovalRequest:
     summary: str
     diff: str = ""
     dangerous: bool = False
-    before: str | None = None  # file intero prima e dopo la modifica: gli editor li mostrano affiancati
+    before: str | None = None  # whole file before and after the edit: editors show them side by side
     after: str | None = None
 
 
-# risposta: ("yes" | "always" | "no", feedback)
+# answer: ("yes" | "always" | "no", feedback)
 Approver = Callable[[ApprovalRequest], tuple[str, str]]
 
 
@@ -69,14 +69,14 @@ def is_read_only(command: str) -> bool:
 class PermissionPolicy:
     mode: str = "ask"
     root: Path | None = None
-    allow_rules: list[str] = field(default_factory=list)  # es. "bash:pytest*", "edit:src/*"
+    allow_rules: list[str] = field(default_factory=list)  # e.g. "bash:pytest*", "edit:src/*"
 
     def __post_init__(self) -> None:
         if self.mode not in MODES:
-            raise ValueError(f"modalità sconosciuta: {self.mode} ({', '.join(MODES)})")
+            raise ValueError(f"unknown mode: {self.mode} ({', '.join(MODES)})")
         self.allow_rules = list(self.allow_rules) + self._load_rules()
 
-    # --------------------------------------------------------- persistenza
+    # --------------------------------------------------------- persistence
     @property
     def settings_file(self) -> Path | None:
         return self.root / ".mydevagent" / "settings.json" if self.root else None
@@ -101,7 +101,7 @@ class PermissionPolicy:
             path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
     def rule_for(self, tool: str, args: dict[str, Any]) -> str:
-        if tool == "web_fetch":  # per sito, come WebFetch(domain:…) in Claude Code
+        if tool == "web_fetch":  # per site, like WebFetch(domain:…) in Claude Code
             return f"web_fetch:{args.get('host', '')}"
         if tool == "mcp":
             return f"mcp:{args.get('server', '')}.{args.get('tool', '')}"
@@ -123,14 +123,14 @@ class PermissionPolicy:
             target = f"{tool}:"
         return any(fnmatch.fnmatch(target, rule) for rule in self.allow_rules)
 
-    # ------------------------------------------------------------ decisione
+    # ------------------------------------------------------------- decision
     def decide(self, tool: str, args: dict[str, Any]) -> Decision:
         if tool in READ_TOOLS:
             return Decision("allow")
         command = str(args.get("command", "")) if tool == "bash" else ""
         if command and is_dangerous(command):
-            return Decision("ask", "comando potenzialmente distruttivo")
-        if tool == "web_fetch" and self.mode != "auto":  # leggere una pagina va bene anche in plan, chiedendo
+            return Decision("ask", "potentially destructive command")
+        if tool == "web_fetch" and self.mode != "auto":  # reading a page is fine even in plan mode, after asking
             return Decision("allow" if self._allowed_by_rule(tool, args) else "ask")
         if self.mode == "plan":
             if (tool == "bash" and is_read_only(command)) or (tool == "mcp" and args.get("read_only")):

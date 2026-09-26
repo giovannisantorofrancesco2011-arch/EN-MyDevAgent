@@ -1,5 +1,5 @@
-from main import saluta
+from main import greet
 
 
-def test_saluta():
-    assert saluta("Gio") == "Ciao, Gio!"
+def test_greet():
+    assert greet("Gio") == "Hello, Gio!"

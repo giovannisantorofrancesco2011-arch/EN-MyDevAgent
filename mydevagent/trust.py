@@ -1,5 +1,5 @@
-"""Il tuo sì per le cose del progetto che eseguono comandi (hook, server MCP): chiesto una volta per
-progetto, e di nuovo se cambiano. Un repository scaricato non deve poter lanciare programmi da solo."""
+"""Your OK for the project things that run commands (hooks, MCP servers): asked once per
+project, and again if they change. A downloaded repository must not be able to launch programs on its own."""
 
 from __future__ import annotations
 

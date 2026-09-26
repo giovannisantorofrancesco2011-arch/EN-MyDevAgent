@@ -34,7 +34,7 @@ def test_code_blocks_with_path_and_run():
 
 def test_parse_review():
     review = parse_review("VERDICT: APPROVE\n- [BLOCKER] api.py: SQL injection → use params\n- [MINOR] x: y")
-    assert review.verdict == "REVISE"  # un BLOCKER prevale su APPROVE
+    assert review.verdict == "REVISE"  # a BLOCKER overrides APPROVE
     assert review.blocking == [("BLOCKER", "api.py: SQL injection → use params")]
     assert parse_review("VERDICT: APPROVE\n- none").verdict == "APPROVE"
 

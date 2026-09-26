@@ -1,4 +1,4 @@
-"""Client LLM unico compatibile OpenAI (Ollama, LM Studio, vLLM, llama.cpp, qualsiasi /v1)."""
+"""Single OpenAI-compatible LLM client (Ollama, LM Studio, vLLM, llama.cpp, any /v1)."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ class Completion:
     completion_tokens: int = 0
     ms: int = 0
     tool_calls: int = 0
-    calls: list[dict[str, Any]] = field(default_factory=list)  # tool call nativi: {id, name, arguments}
+    calls: list[dict[str, Any]] = field(default_factory=list)  # native tool calls: {id, name, arguments}
 
 
 class LLM(Protocol):
@@ -64,10 +64,10 @@ class LLM(Protocol):
 
 
 class OpenAICompatLLM:
-    """Un client per backend; il modello viene scelto in base al tier del profilo attivo."""
+    """One client per backend; the model is picked from the active profile's tier."""
 
     def __init__(self, settings: Settings, timeout: float = 600.0) -> None:
-        from openai import OpenAI  # import lazy: velocizza la CLI
+        from openai import OpenAI  # lazy import: speeds up the CLI
 
         self._openai_cls = OpenAI
         self.settings = settings
@@ -117,14 +117,14 @@ class OpenAICompatLLM:
             if not chunk.choices:
                 continue
             delta = chunk.choices[0].delta
-            # alcuni server (vLLM, llama.cpp) espongono il thinking in reasoning_content: lo ignoriamo
+            # some servers (vLLM, llama.cpp) expose thinking in reasoning_content: we ignore it
             if delta and delta.content:
                 yield delta.content
 
     def complete_with_tools(
         self, messages, *, tools, executor, tier="main", max_tokens=1024, temperature=0.2, max_steps=4
     ) -> Completion:
-        """Loop di function-calling nativo (ReAct) con al massimo `max_steps` round di tool."""
+        """Native function-calling loop (ReAct) with at most `max_steps` tool rounds."""
         client, model = self._client_for(tier)
         convo = list(messages)
         total = Completion(text="", model=model)
@@ -174,9 +174,9 @@ class OpenAICompatLLM:
 # --------------------------------------------------------------------------- fake
 @dataclass
 class FakeLLM:
-    """LLM deterministico per test e demo offline (`MYDEVAGENT_FAKE_LLM=1`).
+    """Deterministic LLM for tests and offline demos (`MYDEVAGENT_FAKE_LLM=1`).
 
-    Riconosce il ruolo dell'agente dal system prompt e restituisce output plausibili nel formato atteso.
+    Recognizes the agent's role from the system prompt and returns plausible output in the expected format.
     """
 
     responses: dict[str, str] = field(default_factory=dict)

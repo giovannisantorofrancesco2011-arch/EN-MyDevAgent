@@ -1,9 +1,9 @@
-"""Modalità agente + team: l'Architetto pianifica, l'agente modifica i file, i quality gate
-revisionano il diff reale e l'agente corregge.
+"""Agent mode + team: the Architect plans, the agent edits the files, the quality gates
+review the real diff and the agent fixes it.
 
-    fast      → AgentLoop con lo specialista scelto dal router
-    balanced  → Architect → AgentLoop → Reviewer sul diff → correzioni (1 giro)
-    deep      → Architect → AgentLoop → Security/Performance/Edge/Reviewer sul diff → correzioni (2 giri)
+    fast      → AgentLoop with the specialist picked by the router
+    balanced  → Architect → AgentLoop → Reviewer on the diff → fixes (1 round)
+    deep      → Architect → AgentLoop → Security/Performance/Edge/Reviewer on the diff → fixes (2 rounds)
 """
 
 from __future__ import annotations
@@ -36,34 +36,37 @@ from .tools import AgentTools
 
 MAX_STEPS = {"fast": 15, "balanced": 25, "deep": 35, "ultra-deep": 45}
 CHANGE_INTENT_RE = re.compile(
-    r"\b(aggiung\w*|crea\w*|modific\w*|implement\w*|sistem\w*|correggi\w*|rimuov\w*|elimin\w*|rinomin\w*|"
-    r"sposta\w*|scriv\w*|refactor\w*|migra\w*|aggiorn\w*|add|create|implement|fix|remove|delete|rename|"
-    r"refactor|write|update|migrate|change|build)\b", re.IGNORECASE)
+    r"\b(add\w*|creat\w*|implement\w*|fix\w*|remov\w*|delet\w*|renam\w*|refactor\w*|writ\w*|updat\w*|"
+    r"migrat\w*|chang\w*|build\w*|modif\w*|edit\w*|replac\w*|convert\w*|mov\w*|improv\w*|rewrit\w*|"
+    r"generat\w*|install\w*|set\s+up|setup|make|clean\s+up|optimi[sz]\w*|"
+    r"aggiung\w*|crea\w*|modific\w*|sistem\w*|correggi\w*|rimuov\w*|elimin\w*|rinomin\w*|"
+    r"sposta\w*|scriv\w*|migra\w*|aggiorn\w*)\b", re.IGNORECASE)
 
 
 QUESTION_RE = re.compile(
-    r"^\s*(cosa|che cosa|come|perch[eé]|quale|quali|quando|dove|chi|quanto|spiega\w*|descrivi\w*|mostra\w*|"
-    r"what|how|why|which|when|where|who|explain|describe|show|is|are|does|do|can|should)\b", re.IGNORECASE)
+    r"^\s*(what|how|why|which|when|where|who|explain|describe|show|is|are|does|do|can|should|"
+    r"cosa|che cosa|come|perch[eé]|quale|quali|quando|dove|chi|quanto|spiega\w*|descrivi\w*|mostra\w*)\b",
+    re.IGNORECASE)
 
 
 def wants_changes(request: str) -> bool:
-    """La richiesta chiede di modificare il progetto (e non solo una spiegazione o una domanda)?"""
-    text = re.sub(r"^\s*/[\w-]+\s*", "", request)  # toglie /fast, /deep, …
+    """Does the request ask to change the project (and not just for an explanation or an answer)?"""
+    text = re.sub(r"^\s*/[\w-]+\s*", "", request)  # strips /fast, /deep, …
     if QUESTION_RE.match(text) or (text.rstrip().endswith("?") and not re.match(
-            r"\s*(puoi|potresti|can you|could you)\b", text, re.IGNORECASE)):
+            r"\s*(can you|could you|would you|will you|please|puoi|potresti)\b", text, re.IGNORECASE)):
         return False
     return bool(CHANGE_INTENT_RE.search(text))
 EventHandler = Callable[[dict[str, Any]], None]
-# i nomi dei permessi di Claude Code, per il campo permission_mode degli hook
+# Claude Code's permission names, for the hooks' permission_mode field
 PERMISSION_MODES = {"ask": "default", "auto-edit": "acceptEdits", "plan": "plan", "auto": "bypassPermissions"}
 LEARN_PROMPT = """# Learning mode: the user is learning to program
 - Before changing code, say in one or two simple sentences what you are about to do and why.
 - Leave ONE small, meaningful piece for the user to write (a condition, a loop or a function body of 3-10 lines):
-  write everything else, and where their code goes put a `TODO(tu):` comment with a hint of what to write (not
+  write everything else, and where their code goes put a `TODO(you):` comment with a hint of what to write (not
   the solution). Then tell them the file and what to write. Tests that exercise their part may fail until they
   write it: that is expected, say so instead of filling it in. Skip the exercise for urgent bug fixes or when
   the user asks you to write everything.
-- End with a short "💡 Da sapere" section: 2-3 bullet points that explain the concepts you used, in simple words.
+- End with a short "💡 Good to know" section: 2-3 bullet points that explain the concepts you used, in simple words.
 - When the user says they wrote their part, read it, say what is right and explain gently what to fix, without
   rewriting it for them unless they ask."""
 NO_CHANGES = ("The request asks to change the project, but you have not modified any file. Apply the changes now "
@@ -82,9 +85,9 @@ class AgentRunner:
         self.approver = approver
         self.checkpoints = checkpoints or CheckpointStore(self.root)
         self.hooks = hooks if hooks is not None else Hooks(self.root)
-        self.mcp = mcp  # None: i server si creano per questa richiesta e si chiudono alla fine
-        self.learn = learn  # modalità impara: spiega e lascia all'utente un pezzo da scrivere
-        self.extra_dirs = [Path(d).resolve() for d in extra_dirs or []]  # cartelle in più (/add-dir)
+        self.mcp = mcp  # None: servers are created for this request and closed at the end
+        self.learn = learn  # learn mode: explain and leave the user a piece to write
+        self.extra_dirs = [Path(d).resolve() for d in extra_dirs or []]  # extra folders (/add-dir)
 
     def run(self, request: str, **kwargs) -> Iterator[str]:
         if self.mcp is not None:
@@ -105,7 +108,7 @@ class AgentRunner:
         for note in submitted.notes:
             emit({"type": "info", "text": note})
         if submitted.blocked:
-            yield f"⛔ Richiesta bloccata da un hook: {submitted.reason}"
+            yield f"⛔ Request blocked by a hook: {submitted.reason}"
             return
         orch = self.orch
         route = orch.route(request, mode=mode)
@@ -140,16 +143,16 @@ class AgentRunner:
                               hooks=self.hooks, mcp=mcp, allowed=allowed, extra_dirs=self.extra_dirs, **extra)
 
         def spawn(agent: SubAgent, prompt: str) -> tuple[str, AgentTools]:
-            """Un sotto-agente: contesto suo, i suoi tool (senza `task`: niente sotto-sotto-agenti)."""
+            """A subagent: its own context, its own tools (no `task`: no sub-subagents)."""
             child = tools_for(agent.allowed())
             loop = AgentLoop(orch.llm, child, system=f"{agent.prompt}\n\n{base_context}".strip(), tier=agent.tier,
                              max_steps=MAX_STEPS["fast"], native=settings.active_profile.native_tools, emit=emit,
                              cancel=cancel, context_chars=settings.active_profile.num_ctx * 3,
                              stop_event="SubagentStop")
-            emit({"type": "agent_start", "agent": agent.name, "name": f"Agente {agent.name}"})
+            emit({"type": "agent_start", "agent": agent.name, "name": f"Agent {agent.name}"})
             started = time.perf_counter()
             result = loop.run(prompt)
-            emit({"type": "agent_end", "agent": agent.name, "name": f"Agente {agent.name}",
+            emit({"type": "agent_end", "agent": agent.name, "name": f"Agent {agent.name}",
                   "ms": int((time.perf_counter() - started) * 1000), "prompt_tokens": result.prompt_tokens,
                   "completion_tokens": result.completion_tokens, "tool_calls": result.tool_calls, "error": None,
                   "counted": True})
@@ -184,7 +187,7 @@ class AgentRunner:
 
             helpers = [registry[k] for k in route.specialists if k != lead.key]
             also = "".join(f"\n- {a.name}: {a.role}" for a in helpers)
-            # prompt di ruolo compatto: le istruzioni di output della modalità chat confondono i modelli piccoli
+            # compact role prompt: chat-mode output instructions confuse small models
             system = "\n\n".join(filter(None, [
                 registry.persona,
                 f"# Your role: {lead.name}\n{lead.role}\nGoal: {lead.goal}",
@@ -205,7 +208,7 @@ class AgentRunner:
 
             if (not tools.changed and not tools.user_denied and wants_changes(route.request)
                     and self.policy.mode != "plan"):
-                emit({"type": "info", "text": "nessun file modificato: chiedo all'agente di applicare le modifiche"})
+                emit({"type": "info", "text": "no files changed: asking the agent to apply the changes"})
                 result = loop.follow_up(NO_CHANGES)
 
             review_note = ""
@@ -215,27 +218,26 @@ class AgentRunner:
                 diff = self.checkpoints.session_diff(self.checkpoints.current.id if self.checkpoints.current else 0)
                 blocking = self._review(team, state, gates, diff, tools, result.text, round_)
                 if not blocking:
-                    review_note = "✅ Review: approvata"
+                    review_note = "✅ Review: approved"
                     break
                 if round_ >= rounds:
-                    review_note = f"⚠️ Review: {len(blocking)} problemi non risolti (vedi sopra)"
+                    review_note = f"⚠️ Review: {len(blocking)} unresolved issues (see above)"
                     break
                 round_ += 1
-                emit({"type": "info", "text": f"revisione {round_}: {len(blocking)} problemi da correggere"})
+                emit({"type": "info", "text": f"review {round_}: {len(blocking)} issues to fix"})
                 issues = "\n".join(f"- [{i['severity']}] ({i['agent']}) {i['text']}" for i in blocking)
                 result = loop.follow_up(
                     "The reviewers found these problems in your changes:\n" + issues +
                     "\nFix them with the tools, re-run the tests, then give your final answer."
-                    + (" Leave the TODO(tu) parts to the user." if self.learn else ""))
+                    + (" Leave the TODO(you) parts to the user." if self.learn else ""))
         except Cancelled:
             emit({"type": "cancelled"})
             return
 
-        yield result.text or "(nessuna risposta)"
+        yield result.text or "(no answer)"
         yield self._footer(tools, review_note, result, wants_changes(route.request) and self.policy.mode != "plan")
-        emit({"type": "done", "summary": f"{route.mode} · agente · {result.steps} passi · "
-                                         f"{result.tool_calls} tool · ~{result.prompt_tokens + result.completion_tokens:,} token"
-                                         .replace(",", ".")})
+        emit({"type": "done", "summary": f"{route.mode} · agent · {result.steps} steps · "
+                                         f"{result.tool_calls} tools · ~{result.prompt_tokens + result.completion_tokens:,} tokens"})
 
     # ------------------------------------------------------------ ultra-deep
     def _ultra(self, route, team: Team, state: TeamState, tools: AgentTools, context: str, emit, cancel):
@@ -245,7 +247,7 @@ class AgentRunner:
         registry = orch.registry
         settings = orch.settings
         runner = self
-        emit({"type": "info", "text": "ultra-deep: 35 agenti al lavoro (può richiedere diversi minuti)"})
+        emit({"type": "info", "text": "ultra-deep: 35 agents at work (this can take several minutes)"})
 
         class AgentImplementer:
             def __init__(self) -> None:
@@ -322,8 +324,8 @@ class AgentRunner:
                               wants_changes(route.request)) if loop_result else ""
         yield footer
         agents_used = len(pipeline.participants | {"formatter"})
-        emit({"type": "done", "summary": f"ultra-deep · {agents_used} agenti · "
-                                         f"{loop_result.steps if loop_result else 0} passi dell'agente"})
+        emit({"type": "done", "summary": f"ultra-deep · {agents_used} agents · "
+                                         f"{loop_result.steps if loop_result else 0} agent steps"})
 
     # --------------------------------------------------------------- helpers
     @staticmethod
@@ -336,7 +338,7 @@ class AgentRunner:
             return f"ERROR: {type(exc).__name__}: {exc}"
 
     def _rag(self, query: str) -> str:
-        """Pezzi di codice rilevanti dall'indice semantico del progetto, se esiste."""
+        """Relevant code snippets from the project's semantic index, if there is one."""
         from ..tools.rag import CodeIndex
 
         settings = self.orch.settings
@@ -377,24 +379,24 @@ class AgentRunner:
             outputs = list(pool.map(lambda key: team.gate_node({"agent": key, "state": review_state}), gates))
         issues = [i for out in outputs for i in out.get("issues", [])]
         blocking = [i for i in issues if i["severity"] in ("BLOCKER", "MAJOR")]
-        # in modalità impara i TODO(tu) sono l'esercizio dell'utente, non un problema da correggere
+        # in learn mode the TODO(you) parts are the user's exercise, not an issue to fix
         return [i for i in blocking if "todo" not in i["text"].lower()] if self.learn else blocking
 
     @staticmethod
     def _footer(tools: AgentTools, review_note: str, result, request_wants_changes: bool = False) -> str:
         lines = []
         if tools.changed:
-            lines.append("📝 File modificati: " + ", ".join(tools.changed) + "  (/undo per annullare)")
+            lines.append("📝 Files changed: " + ", ".join(tools.changed) + "  (/undo to revert)")
         if tools.last_test:
             command, ok, _ = tools.last_test
-            lines.append(f"{'✅' if ok else '❌'} Test: {'passati' if ok else 'falliti'} ({command})")
+            lines.append(f"{'✅' if ok else '❌'} Tests: {'passed' if ok else 'failed'} ({command})")
         elif tools.changed:
-            lines.append("⚠️ Test: non eseguiti")
+            lines.append("⚠️ Tests: not run")
         if not tools.changed and request_wants_changes and not tools.user_denied:
-            lines.insert(0, "⚠️ Nessun file modificato: l'agente non ha applicato modifiche (riprova, o usa un modello "
-                            "più grande)")
+            lines.insert(0, "⚠️ No files changed: the agent did not apply any changes (try again, or use a "
+                            "bigger model)")
         if review_note:
             lines.append(review_note)
         if result.stopped == "max_steps":
-            lines.append("⚠️ Limite di passi raggiunto: scrivi «continua» per proseguire")
+            lines.append('⚠️ Step limit reached: type "continue" to keep going')
         return ("\n\n---\n" + "\n".join(lines) + "\n") if lines else ""

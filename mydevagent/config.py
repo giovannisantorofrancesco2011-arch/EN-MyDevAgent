@@ -1,4 +1,4 @@
-"""Caricamento della configurazione (YAML + variabili d'ambiente)."""
+"""Configuration loading (YAML + environment variables)."""
 
 from __future__ import annotations
 
@@ -139,22 +139,22 @@ class Settings(BaseModel):
     @property
     def active_profile(self) -> Profile:
         if self.profile not in self.profiles:
-            raise ValueError(f"Profilo '{self.profile}' non definito. Disponibili: {list(self.profiles)}")
+            raise ValueError(f"Profile '{self.profile}' is not defined. Available: {list(self.profiles)}")
         return self.profiles[self.profile]
 
     def mode(self, name: str) -> ModeConfig:
         return self.modes.get(name, ModeConfig())
 
     def resolve_model(self, tier: str) -> tuple[str, Backend]:
-        """Restituisce (nome_modello, backend) per un tier del profilo attivo."""
+        """Returns (model_name, backend) for a tier of the active profile."""
         if tier not in TIERS:
-            raise ValueError(f"Tier sconosciuto: {tier}")
+            raise ValueError(f"Unknown tier: {tier}")
         ref = getattr(self.active_profile, tier) or self.active_profile.main
         if isinstance(ref, str):
             ref = ModelRef(model=ref)
         backend_name = ref.backend or self.default_backend
         if backend_name not in self.backends:
-            raise ValueError(f"Backend '{backend_name}' non definito in settings.yaml")
+            raise ValueError(f"Backend '{backend_name}' is not defined in settings.yaml")
         return ref.model, self.backends[backend_name]
 
 
@@ -169,7 +169,7 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
 
 
 def _load_dotenv(path: Path) -> None:
-    """Loader minimale di .env (non sovrascrive variabili già impostate)."""
+    """Minimal .env loader (does not override variables that are already set)."""
     if not path.is_file():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -202,7 +202,7 @@ def _apply_env(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def _find_config() -> Path:
-    """MYDEVAGENT_CONFIG → ./config/settings.yaml → $MYDEVAGENT_HOME/config → cartella del progetto."""
+    """MYDEVAGENT_CONFIG → ./config/settings.yaml → $MYDEVAGENT_HOME/config → project folder."""
     candidates = [os.environ.get("MYDEVAGENT_CONFIG"), Path.cwd() / "config" / "settings.yaml"]
     if os.environ.get("MYDEVAGENT_HOME"):
         candidates.append(Path(os.environ["MYDEVAGENT_HOME"]) / "config" / "settings.yaml")
@@ -210,12 +210,12 @@ def _find_config() -> Path:
     for candidate in candidates:
         if candidate and Path(candidate).is_file():
             return Path(candidate)
-    raise FileNotFoundError("config/settings.yaml non trovato: usa `pip install -e .` dalla cartella del "
-                            "progetto oppure imposta MYDEVAGENT_HOME / MYDEVAGENT_CONFIG")
+    raise FileNotFoundError("config/settings.yaml not found: run `pip install -e .` from the project "
+                            "folder or set MYDEVAGENT_HOME / MYDEVAGENT_CONFIG")
 
 
 def load_settings(path: str | Path | None = None, overrides: dict[str, Any] | None = None) -> Settings:
-    """Carica config/settings.yaml (o `path`), applica .env, env vars e override espliciti."""
+    """Loads config/settings.yaml (or `path`), applies .env, env vars and explicit overrides."""
     config_path = Path(path) if path else _find_config()
     _load_dotenv(Path.cwd() / ".env")
     _load_dotenv(PROJECT_DIR / ".env")

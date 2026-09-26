@@ -1,4 +1,4 @@
-"""Tool git: sola lettura per default; commit solo con tools.git.allow_commit: true."""
+"""Git tools: read-only by default; commits only with tools.git.allow_commit: true."""
 
 from __future__ import annotations
 

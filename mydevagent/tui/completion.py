@@ -1,4 +1,4 @@
-"""Autocompletamento: /comandi, @agenti, @file del progetto."""
+"""Autocompletion: /commands, @agents, @project files."""
 
 from __future__ import annotations
 
@@ -15,14 +15,14 @@ MAX_FILES = 5000
 class DevCompleter(Completer):
     def __init__(self, commands: dict[str, str], aliases: dict[str, str], root: Path) -> None:
         self.commands = commands
-        self.aliases = aliases  # alias → chiave agente
+        self.aliases = aliases  # alias → agent key
         self.root = root
         self._files: list[str] | None = None
-        self.arguments: dict[str, Callable[[], list[str]]] = {}  # /comando → nomi da completare (dalla UI)
+        self.arguments: dict[str, Callable[[], list[str]]] = {}  # /command → names to complete (from the UI)
 
     @property
     def files(self) -> list[str]:
-        if self._files is None:  # scansione lazy: l'avvio resta istantaneo anche su repo grandi
+        if self._files is None:  # lazy scan: startup stays instant even on large repos
             files = []
             for rel in Workspace(self.root).iter_files():
                 files.append(rel.as_posix())
@@ -50,7 +50,7 @@ class DevCompleter(Completer):
             needle = word[1:].lower()
             for alias in sorted(self.aliases):
                 if alias.startswith(needle):
-                    yield Completion("@" + alias, -len(word), display_meta=f"agente {self.aliases[alias]}")
+                    yield Completion("@" + alias, -len(word), display_meta=f"agent {self.aliases[alias]}")
             shown = 0
             for path in self.files:
                 low = path.lower()

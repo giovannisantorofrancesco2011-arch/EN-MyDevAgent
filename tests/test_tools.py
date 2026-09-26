@@ -16,7 +16,7 @@ def test_workspace_blocks_traversal(tmp_path):
     with pytest.raises(WorkspaceError):
         ws.read("../../etc/passwd")
     with pytest.raises(WorkspaceError):
-        ws.write("b.txt", "x")  # scrittura disabilitata di default
+        ws.write("b.txt", "x")  # writing disabled by default
 
 
 def test_workspace_blocks_symlink_escape(tmp_path):
