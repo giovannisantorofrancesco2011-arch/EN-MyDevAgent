@@ -290,6 +290,21 @@ def test_agent_nudges_when_model_pastes_code(project):
     assert "def sub" in (project / "src" / "calc.py").read_text()
 
 
+def test_agent_applies_code_written_in_the_answer(project):
+    full = "def add(a, b):\n    return a + b\n\n\ndef sub(a, b):\n    return a - b\n"
+    llm = ScriptedLLM(steps=[
+        f"Here is src/calc.py:\n```python\n{full}```\nAnd a new file `src/util.py`:\n```python\nX = 1\n```\n"
+        "Fragment of test_calc.py:\n```python\nx\n```",
+        "Done.",
+    ])
+    loop = AgentLoop(llm, make_tools(project), system="# Role: t")
+    loop.apply_code = True
+    result = loop.run("add sub")
+    assert (project / "src" / "calc.py").read_text() == full and (project / "src" / "util.py").read_text() == "X = 1\n"
+    assert "assert add" in (project / "test_calc.py").read_text()  # a fragment does not overwrite the whole file
+    assert result.text == "Done." and sorted(result.changed) == ["src/calc.py", "src/util.py"]
+
+
 # ------------------------------------------------------------------ ultra-deep
 @dataclass
 class UltraLLM(ScriptedLLM):

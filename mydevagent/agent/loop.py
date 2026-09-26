@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..graph import Cancelled
-from ..reasoning import strip_thinking
+from ..reasoning import extract_code_blocks, strip_thinking
 from .protocol import ToolCall, describe_tools, parse_native_calls, parse_text_calls
 from .tools import AgentTools
 
@@ -64,6 +64,7 @@ class AgentLoop:
         self.nudged = False
         self.stop_event = stop_event  # hook to run when the agent wants to stop (SubagentStop for subagents)
         self.stop_hook_active = False
+        self.apply_code = False  # the request asks for changes: code with a path written in the reply goes into the files
 
     # ------------------------------------------------------------------ API
     def run(self, task: str) -> AgentResult:
@@ -104,6 +105,10 @@ class AgentLoop:
             else:
                 visible, calls = parse_text_calls(strip_thinking(raw))
                 self.messages.append({"role": "assistant", "content": raw})
+            if not calls and self.apply_code and self.tools.policy.mode != "plan":
+                calls = self._code_as_writes(visible)
+                if calls:
+                    self.emit({"type": "info", "text": "the model wrote the code in its reply: applying it to the files"})
             if not calls:
                 if self._should_nudge(visible, res):
                     self.nudged = True
@@ -157,6 +162,25 @@ class AgentLoop:
         if self.nudged or self.tools.changed or self.tools.policy.mode == "plan":
             return False
         return visible.count("```") >= 2
+
+    def _code_as_writes(self, visible: str) -> list[ToolCall]:
+        """Small models often write the files in their reply instead of using the tools: every block with a path
+        becomes a write_file (with permissions, diff and /undo as usual)."""
+        calls = []
+        for block in extract_code_blocks(visible):
+            if block.is_run or not block.path:
+                continue
+            try:
+                target = self.tools.workspace.resolve(block.path)
+            except Exception:  # path outside the project or invalid: skip it
+                continue
+            if target.is_file():
+                old = target.read_text(encoding="utf-8", errors="replace").count("\n")
+                # ponytail: a block much shorter than the file is almost always a fragment, not the whole file
+                if block.body.count("\n") < old * 0.6:
+                    continue
+            calls.append(ToolCall(name="write_file", args={"path": block.path, "content": block.body}))
+        return calls
 
     def _execute(self, call: ToolCall) -> str:
         if call.error:
