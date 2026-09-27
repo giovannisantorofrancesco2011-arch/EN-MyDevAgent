@@ -1,5 +1,7 @@
 # MyDevAgent Studio
 
+> © 2026 gio. **All rights reserved — not open source.** The Studio and Vio may not be copied. See [LICENSE](LICENSE).
+
 The code editor with **Vio** as its main agent. It is based on [VSCodium](https://vscodium.com) (VS Code without
 telemetry) and uses [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/EN-MyDevAgent): everything runs on
 your computer with Ollama, no cloud and no subscriptions.
@@ -113,4 +115,8 @@ Every push to this branch starts the Windows build on GitHub Actions (`.github/w
 publishes the installer in the `studio-en` release (recreated on every build, never marked as the latest release,
 so it does not replace the Italian edition). For a new version, change `version` in `extension/package.json`.
 
-MIT. VSCodium and VS Code are MIT.
+**License: all rights reserved, not open source.** You may download and use MyDevAgent Studio for free, but you may not
+copy, modify, redistribute or sell it, or copy Vio (look, pixel art, expressions, style), the name or the theme.
+Details are in [LICENSE](LICENSE).
+
+Third-party parts keep their own licenses: VSCodium and VS Code are MIT.

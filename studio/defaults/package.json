@@ -4,7 +4,7 @@
   "description": "The starting settings of MyDevAgent Studio: purple theme and no VSCodium updates.",
   "version": "0.2.0",
   "publisher": "mydevagent",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "engines": {
     "vscode": "^1.90.0"
   },
