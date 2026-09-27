@@ -1,5 +1,8 @@
 # MyDevAgent
 
+> © 2026 gio. **All rights reserved — not open source.** The code is visible but may not be copied,
+> modified or redistributed, and Vio may not be copied. See [LICENSE](LICENSE).
+
 > This is the **English edition** of MyDevAgent (branch `EN-MyDevAgent`). The Italian edition lives on branch
 > [MyDevAgent](https://github.com/giovannisantorofrancesco2011-arch/MyDevAgent/tree/MyDevAgent).
 
@@ -258,5 +261,7 @@ ruff check .
 MYDEVAGENT_FAKE_LLM=1 mydevagent                 # try the interface without a model
 ```
 
-MIT license (see [LICENSE](LICENSE)). Models have their own licenses (Qwen: Apache-2.0 for most sizes —
+**License: all rights reserved.** MyDevAgent is **not open source**: you may download and use it for free, but you may not
+copy, modify, redistribute or sell the code, or copy Vio (look, pixel art, expressions, style), the Studio, the name or the
+visual theme. Details are in [LICENSE](LICENSE). Models have their own licenses (Qwen: Apache-2.0 for most sizes —
 always check the model card).
