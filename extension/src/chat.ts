@@ -51,6 +51,7 @@ export class Chat implements vscode.WebviewViewProvider, vscode.TextDocumentCont
   readonly state = {
     connected: false, busy: false, permission: "ask", team: "auto", learn: false, model: "",
     commands: [] as { name: string; description: string }[], agents: {} as Record<string, string>,
+    ctx: null as number | null, // % of the model's context in use (/context)
   };
   private readonly stateEmitter = new vscode.EventEmitter<void>();
   readonly onState = this.stateEmitter.event;
@@ -206,7 +207,61 @@ ${script("chat.js")}
       model: hello.models.main, commands: hello.commands, agents: hello.agents });
     if (this.transcript.length) this.post({ type: "history", messages: this.transcript });
     void this.refreshFiles();
+    // which MyDevAgent I'm using: if there are several copies on the PC, you see it right away
+    const where = hello.home ? `MyDevAgent in ${hello.home}${hello.installed ? ` · version ${hello.installed}` : ""}` : "";
+    if (where) {
+      this.log.appendLine(where);
+      this.post({ type: "notice", text: `🟣 ${where}` });
+    }
     if (await this.checkHealth()) this.askTrust(hello.untrusted);
+    void this.refreshUsage();
+    void this.checkUpdates();
+  }
+
+  /** MyDevAgent updates on GitHub? Offers them with the "Update" button (silent when offline). */
+  private async checkUpdates(): Promise<void> {
+    try {
+      const { available } = await this.bridge.request("updates");
+      if (available > 0) {
+        this.post({ type: "update", count: available, actions: [{ id: "update", label: "Update", primary: true }] });
+      }
+    } catch {
+      // old MyDevAgent (without the method) or no git: no notice
+    }
+  }
+
+  private async runUpdate(): Promise<void> {
+    if (this.state.busy) return this.showError(new BridgeError("I'm working", "Wait for the request to finish, then update."));
+    this.setup("info", "Updating MyDevAgent…", "Downloading what's new from GitHub.", [], "Updating myself…");
+    let result: any;
+    try {
+      result = await this.bridge.request("update");
+    } catch (error) {
+      const { message, hint } = errorInfo(error);
+      return this.setup("error", message, hint || "Update from the terminal with /update.",
+        [{ id: "dismiss", label: "Close" }], "I couldn't update myself.");
+    }
+    if (!result.ok) {
+      return this.setup("error", "Update failed", result.message, [{ id: "dismiss", label: "Close" }],
+        "I couldn't update myself.");
+    }
+    this.setup("none");
+    const news = (result.changes || []).slice(0, 8).map((c: string) => `• ${c}`).join("\n");
+    this.post({ type: "notice", text: result.message + (news ? `\n${news}` : "") });
+    if (result.restart) {
+      await this.connect(); // starts again with the new code
+      this.say("Updated! Now I have the latest features.", "love", 5);
+    }
+  }
+
+  /** The share of context in use, for the top bar. */
+  private async refreshUsage(): Promise<void> {
+    try {
+      const usage = await this.bridge.request("context");
+      this.setState({ ctx: usage.percent });
+    } catch {
+      this.setState({ ctx: null });
+    }
   }
 
   /** Is Ollama running and are the models there? If something is missing, say so in the chat, with a button to fix it. */
@@ -366,7 +421,25 @@ ${script("chat.js")}
       await this.bridge.request("clear");
       this.transcript = [];
       this.post({ type: "reset" });
+      void this.refreshUsage();
       this.say("New chat: go ahead!", "done", 4);
+    } else if (name === "context") {
+      const usage = await this.bridge.request("context");
+      this.setState({ ctx: usage.percent });
+      this.post({ type: "contextUsage", ...usage });
+    } else if (name === "compact") {
+      this.setState({ busy: true });
+      this.say("Summarizing the conversation…", "think");
+      try {
+        const result = await this.bridge.request("compact");
+        this.setState({ ctx: result.usage.percent });
+        this.post({ type: "compacted", ...result });
+        if (result.compacted) this.say("Done: I made room in my memory.", "done", 4);
+      } finally {
+        this.setState({ busy: false });
+      }
+    } else if (name === "update") {
+      await this.runUpdate();
     } else if (name === "stats") {
       const result = await this.bridge.request("stats", days ? { days } : {});
       this.post({ type: "stats", ...result, label: days ? `last ${days} days` : "all time" });
@@ -393,6 +466,7 @@ ${script("chat.js")}
         this.setup("none");
         return this.say("OK, I enabled the project's hooks and MCP servers.", "done", 5);
       case "dismiss": return this.setup("none");
+      case "update": return this.runUpdate();
       case "retry-last": if (this.lastPrompt) this.post({ type: "fill", text: this.lastPrompt });
     }
   }
@@ -474,6 +548,7 @@ ${script("chat.js")}
     if (end.answer) this.transcript.push({ role: "assistant", content: end.answer });
     for (const request of [...this.approvals.keys()]) await this.closeApproval(request);
     if (end.files?.length) void this.refreshFiles();
+    void this.refreshUsage();
   }
 
   // ------------------------------------------------------ proposed changes

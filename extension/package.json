@@ -2,7 +2,7 @@
   "name": "mydevagent",
   "displayName": "MyDevAgent",
   "description": "Vio, your local coding agent: chat, changes you confirm, Ctrl+I and Tab. Runs on Ollama, no cloud.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "mydevagent",
   "license": "SEE LICENSE IN LICENSE",
   "icon": "media/icon.png",
