@@ -83,6 +83,7 @@ COMMANDS = {
     "/init": "create MYDEVAGENT.md with the project's commands and conventions",
     "/memory": "show the project memory · /memory <text> adds a note",
     "/compact": "summarize the conversation to free up context",
+    "/context": "how much of the model's context you are using (instructions, summary, messages, free)",
     "/model": "change the main model · /model <name> [--save]",
     "/models": "installed models and models in use",
     "/pull": "download a model from Ollama · /pull <name>",
@@ -147,6 +148,7 @@ class TuiApp:
         self.last_files: dict[str, str] = {}
         self.pending_context: dict[str, str] = {}  # output of `!` commands to attach to the next turn
         self.stats = {"tokens": 0, "turns": 0, "seconds": 0.0}
+        self.ctx_percent: int | None = None  # for the bottom bar: refreshed after every turn and with /context
         self.turn_log: list[dict[str, Any]] = []  # this session's requests, for /stats
         self.names = {a.key: a.name for a in self.orch.registry}
         self.model = self.orch.settings.resolve_model("main")[0]
@@ -378,6 +380,8 @@ class TuiApp:
             ("class:tb.dim", " · "), ("class:tb", self.model),
             ("class:tb.dim", " · team "), ("class:tb.key", self.mode), ("class:tb.dim", " · "), net,
             ("class:tb.dim", f" · ~{self.stats['tokens']:,} tok"),
+            *([("class:tb.dim", " · ctx "), ("class:tb.warn" if self.ctx_percent >= 70 else "class:tb.dim",
+                                                f"{self.ctx_percent}%")] if self.ctx_percent is not None else []),
             ("class:tb.dim", " · / for commands"),
         ]
         if self.branch:
@@ -561,6 +565,8 @@ class TuiApp:
                               title="project memory", border_style="grey50", expand=False))
         elif cmd == "/compact":
             self._compact(manual=True)
+        elif cmd == "/context":
+            self._show_context()
         elif cmd == "/model":
             if not arg:
                 c.print(f"[dim]⎿  main model: {self.model} · /models for the list[/]")
@@ -651,6 +657,7 @@ class TuiApp:
         elif cmd == "/clear":
             self.session = Session(cwd=str(self.root), mode=self.mode)
             self.last_answer, self.last_files, self.pending_context = "", {}, {}
+            self.ctx_percent = None
             c.clear()
             self.banner()
         elif cmd in self.custom:
@@ -1188,21 +1195,49 @@ class TuiApp:
                                      if m["role"] == "assistant"), "")
             self.console.print(f"[dim]⎿  Resumed '{escape(self.session.title)}'[/]")
 
+    def _usage(self) -> extras.ContextUsage:
+        usage = extras.context_usage(self.orch.settings, self.orch.registry.persona, self.root, self.session.history)
+        self.ctx_percent = usage.percent
+        return usage
+
+    def _show_context(self) -> None:
+        u = self._usage()
+        width = 40
+        parts = [(u.instructions, "#f0a8e0"), (u.summary, "yellow"), (u.messages, "cyan")]
+        cells = [max(1, round(width * n / u.window)) if n else 0 for n, _ in parts]
+        bar = "".join(f"[{color}]{'█' * c}[/]" for c, (_, color) in zip(cells, parts))
+        bar += f"[grey37]{'░' * max(0, width - sum(cells))}[/]"
+        n = lambda v: f"{v:,}"  # noqa: E731
+        rows = [("#f0a8e0", "Instructions & memory", u.instructions), ("yellow", "Summary", u.summary),
+                ("cyan", f"Messages ({u.count})", u.messages), ("grey50", "Free", u.free)]
+        c = self.console
+        c.print(f"\n [bold {ACCENT}]Context[/]\n  {bar}   [bold]{u.percent}%[/] of {n(u.window)} tokens\n")
+        for color, label, value in rows:
+            c.print(f"  [{color}]■[/] {label:<22} {n(value)} tokens")
+        c.print(f"\n  [dim]Estimate: about 4 characters per token. Auto-compacts at {round(extras.AUTO_COMPACT_AT * 100)}% "
+                "(or with /compact).[/]\n")
+
     def _compact(self, manual: bool = False) -> None:
         if len(self.session.history) < 4:
             if manual:
                 self.console.print("[dim]⎿  Conversation still short, nothing to compact.[/]")
             return
+        before = self._usage().used
         with self.console.status(f"[{ACCENT}]✻ Compacting the conversation…[/]"):
             try:
                 compacted = extras.compact_history(self.orch.llm, self.session.history)
             except Exception as exc:
                 self.console.print(f"[red]⎿  compaction failed: {escape(str(exc))}[/]")
                 return
-        before = len(self.session.history) // 2
+        turns = len(self.session.history) // 2
         self.session.history = compacted
         self.session.save()
-        self.console.print(f"[dim]⎿  {before} turns summarized in one message (/compact)[/]")
+        freed = max(0, before - self._usage().used)
+        self.console.print(f"  ⎿  [green]✓[/] Conversation compacted ({turns} turns) · freed about "
+                           f"{freed:,} tokens · [dim]/context[/]")
+        for line in extras.summary_of(compacted).splitlines()[:12]:
+            if line.strip():
+                self.console.print(f"     [dim]{escape(line.strip().replace('**', ''))}[/]")
 
     # ------------------------------------------------------------- shell
     def run_shell(self, command: str) -> None:
@@ -1230,7 +1265,7 @@ class TuiApp:
         return collect_attachments(self.root, text, self.extra_dirs)
 
     def submit(self, text: str, display: str | None = None, guest: bool = False) -> str:
-        if len(self.session.history) >= AUTO_COMPACT_MESSAGES:
+        if extras.needs_compact(self._usage(), self.session.history, AUTO_COMPACT_MESSAGES):
             self._compact()
         files = self.collect_attachments(text)
         for name in files:
@@ -1248,6 +1283,8 @@ class TuiApp:
         finally:
             self.policy.mode = mode
         self.session.add_turn(display or text, answer)
+        with contextlib.suppress(Exception):
+            self._usage()  # the percentage in the bottom bar
         return answer
 
     def run_turn(self, text: str, files: dict[str, str]) -> str:
