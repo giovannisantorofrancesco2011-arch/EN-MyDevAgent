@@ -374,6 +374,21 @@ def test_runner_insists_when_no_file_changed(project, settings):
     assert (project / "src" / "sub.py").exists() and "No files changed" not in out
 
 
+def test_failed_turns_are_not_shown_to_the_model(project, settings):
+    # the chat Studio resumed held the "no changes" answers: the model copied them
+    llm = ScriptedLLM(steps=["I don't know.",
+                             T("write_file", path="src/sub.py", content="x = 1\n"), "Done."])
+    history = [{"role": "user", "content": "create src/sub.py"},
+               {"role": "assistant", "content": "No change is needed.\n\n---\n⚠️ No files changed: …"}]
+    out = "".join(AgentRunner(Orchestrator(settings, llm=llm), project, PermissionPolicy(mode="auto", root=project))
+                  .run("/fast create src/sub.py", history=history))
+    task = [c for c in llm.calls if c.get("role") == "agent"][0]["messages"][1]["content"]
+    assert "This earlier attempt failed" in task and "No change is needed" not in task
+    retry = [c for c in llm.calls if c.get("role") == "agent"][1]["messages"][-1]["content"]
+    assert retry.endswith("The request: create src/sub.py")
+    assert (project / "src" / "sub.py").exists() and "No files changed" not in out
+
+
 def test_footer_warns_when_nothing_changed(project, settings):
     llm = ScriptedLLM(steps=["I do not know how.", "Still nothing."])
     out = "".join(AgentRunner(Orchestrator(settings, llm=llm), project,
