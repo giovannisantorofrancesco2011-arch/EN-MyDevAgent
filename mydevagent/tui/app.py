@@ -34,8 +34,9 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 from rich.table import Table
 
-from .. import health, plugins, templates
+from .. import health, plugins, plus, templates
 from .. import hooks as hooks_mod
+from .. import license as license_mod
 from .. import mcp as mcp_mod
 from .. import stats as stats_mod
 from .. import update as update_mod
@@ -100,6 +101,8 @@ COMMANDS = {
     "/plugin": "plugins (Claude Code format) · /plugin install <user/repo> · update · remove",
     "/hooks": "active hooks (automatic commands) · /hooks trust enables the project's",
     "/mcp": "MCP servers (external tools) · /mcp reload · /mcp trust",
+    "/license": "your license · /license <code> activates it · /license remove removes it from this computer",
+    **plus.COMMANDS,
     "/update": "update MyDevAgent to the latest version (models and settings are kept)",
     "/resume": "resume a previous session in this folder",
     "/export": "save the conversation as Markdown",
@@ -139,6 +142,8 @@ class TuiApp:
         self.mode = self.session.mode
         self.agent_mode = agent_mode
         self.policy = PermissionPolicy(mode=permission_mode, root=self.root)
+        self.jobs = plus.Background(self.orch, self.root, self._background_done)
+        self._auto_memory = background  # automatic memory (Plus): off in tests
         self.checkpoints = CheckpointStore(self.root)
         existing = self.checkpoints.list()
         self.session_start_cp = (existing[-1].id + 1) if existing else 1
@@ -640,6 +645,8 @@ class TuiApp:
             self._mcp(arg)
         elif cmd == "/update":
             self._update()
+        elif cmd == "/license":
+            self._license(arg)
         elif cmd == "/vio":
             self._pats = getattr(self, "_pats", 0) + 1
             self.say(mascot.PATS[(self._pats - 1) % len(mascot.PATS)], "love")
@@ -660,11 +667,61 @@ class TuiApp:
             self.ctx_percent = None
             c.clear()
             self.banner()
+        elif cmd in plus.COMMANDS:
+            self._plus(cmd, arg, text)
         elif cmd in self.custom:
             self.submit(extras.expand_command(self.custom[cmd][1], arg), display=text)
         else:
             c.print(f"[red]⎿  unknown command: {escape(cmd)}[/] [dim](/help)[/]")
         return True
+
+    def _plus(self, cmd: str, arg: str, text: str) -> None:
+        c = self.console
+        why = license_mod.plus_needed()
+        if why:
+            c.print(f"[{ACCENT}]⎿  {escape(why)}[/]")
+            return
+        if cmd == "/background":
+            if not arg:
+                for job in self.jobs.jobs:
+                    c.print(f"[dim]⎿  no. {job.id} · {job.status} · {escape(job.task[:70])}[/]")
+                    if job.status != "running":
+                        c.print(escape(job.answer or "(no answer)"), highlight=False)
+                if not self.jobs.jobs:
+                    c.print("[dim]⎿  no background jobs · /background <task> to start one[/]")
+                return
+            job = self.jobs.start(arg)
+            c.print(f"[dim]⎿  job no. {job.id} started in the background: keep going, I'll tell you when it's done[/]")
+            return
+        try:
+            task = plus.expand(cmd, arg)
+        except ValueError as exc:
+            c.print(f"[red]⎿  {escape(str(exc))}[/]")
+            return
+        was_agent, self.agent_mode = self.agent_mode, True
+        self.submit(task, display=text)
+        self.agent_mode = was_agent
+
+    def _background_done(self, job) -> None:
+        if job.status == "done":
+            self.say(f"Background job no. {job.id} is done! Type /background to see how it went.", "done")
+        else:
+            self.say(f"Background job no. {job.id} stopped: {job.answer[:80]}", "error")
+
+    def _remember(self, request: str, answer: str) -> None:
+        with contextlib.suppress(Exception):  # automatic memory must never get in the way
+            if plus.remember(self.orch.llm, self.root, request, answer):
+                self.say("I noted something about the project in MYDEVAGENT.md.", "love")
+
+    def _license(self, arg: str) -> None:
+        if arg.lower() == "remove":
+            self.console.print(f"[dim]⎿  {escape(license_mod.deactivate())}[/]")
+            return
+        state = license_mod.activate(arg) if arg else license_mod.status()
+        color = "green" if state.ok else "red"
+        self.console.print(f"[{color}]⎿  {escape(state.message)}[/]")
+        if not arg and state.kind in ("trial", "expired"):
+            self.console.print(f"[dim]   Subscription or one-time purchase: {license_mod.BUY_URL}[/]")
 
     def _stats(self, arg: str) -> None:
         choice = arg.lower() or "all"
@@ -1265,6 +1322,11 @@ class TuiApp:
         return collect_attachments(self.root, text, self.extra_dirs)
 
     def submit(self, text: str, display: str | None = None, guest: bool = False) -> str:
+        state = license_mod.status()
+        if not state.ok:
+            self.console.print(f"[red]⎿  {escape(state.message)}[/]")
+            self.say("To keep going I need a license: /license <code>", "error")
+            return ""
         if extras.needs_compact(self._usage(), self.session.history, AUTO_COMPACT_MESSAGES):
             self._compact()
         files = self.collect_attachments(text)
@@ -1283,6 +1345,8 @@ class TuiApp:
         finally:
             self.policy.mode = mode
         self.session.add_turn(display or text, answer)
+        if self._auto_memory and answer and license_mod.status().plus:
+            threading.Thread(target=self._remember, args=(display or text, answer), daemon=True).start()
         with contextlib.suppress(Exception):
             self._usage()  # the percentage in the bottom bar
         return answer
@@ -1432,6 +1496,9 @@ class TuiApp:
             self.startup_check()
         self.start_project()
         if self._startup_check:
+            state = license_mod.status()
+            if state.kind in ("trial", "expired"):
+                self._license("")
             threading.Thread(target=self._check_updates, daemon=True).start()
         while True:
             self.console.print()

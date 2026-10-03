@@ -261,7 +261,8 @@ ruff check .
 MYDEVAGENT_FAKE_LLM=1 mydevagent                 # try the interface without a model
 ```
 
-**License: all rights reserved.** MyDevAgent is **not open source**: you may download and use it for free, but you may not
+**License: all rights reserved.** MyDevAgent is **not open source**: you may try it free for 14 days, then use it with a
+license ([pricing](https://mydevagent.github.io/en/pricing.html)); you may not
 copy, modify, redistribute or sell the code, or copy Vio (look, pixel art, expressions, style), the Studio, the name or the
 visual theme. Details are in [LICENSE](LICENSE). Models have their own licenses (Qwen: Apache-2.0 for most sizes —
 always check the model card).
